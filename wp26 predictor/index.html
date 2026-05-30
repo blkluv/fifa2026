@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#0B1020" />
+<title>پیش‌بین جام جهانی ۲۰۲۶</title>
+<link rel="stylesheet" href="../assets/css/fonts.css" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; min-height: 100vh; min-height: 100dvh;
+    background: #060912;
+    font-family: 'Vazirmatn', 'Inter', system-ui, sans-serif;
+    color: #fff;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+  body { overflow: hidden; }
+  #root { width: 100%; height: 100vh; height: 100dvh; }
+
+  /* scrollbars off everywhere */
+  *::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  * { scrollbar-width: none; }
+
+  /* Responsive shell */
+  .wp26-shell {
+    width: 100%; height: 100%;
+    position: relative;
+    background:
+      radial-gradient(circle at 15% 0%, #00E5FF22, transparent 38%),
+      radial-gradient(circle at 85% 0%, #7C4DFF33, transparent 42%),
+      radial-gradient(circle at 50% 100%, #7C4DFF22, transparent 50%),
+      #060912;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .wp26-app {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    background: #0B1020;
+    overflow: hidden;
+  }
+
+  /* Tablet / desktop — center as phone-shaped card with floating chrome */
+  @media (min-width: 720px) {
+    .wp26-shell {
+      padding: 24px;
+    }
+    .wp26-shell::before {
+      content: 'WP26 · پیش‌بین جام جهانی';
+      position: absolute; top: 20px; right: 28px;
+      font-family: 'Vazirmatn', system-ui;
+      font-weight: 700; font-size: 12px;
+      color: rgba(255,255,255,0.4); letter-spacing: 0.04em;
+    }
+    .wp26-shell::after {
+      content: 'پیش‌نمایش ریسپانسیو · پنجره را باریک کن تا حالت موبایل را ببینی';
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      font-family: 'Vazirmatn', system-ui;
+      font-weight: 600; font-size: 11px;
+      color: rgba(255,255,255,0.32);
+    }
+    .wp26-app {
+      max-width: 440px;
+      height: min(900px, calc(100vh - 80px));
+      border-radius: 36px;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.06),
+        0 40px 80px rgba(0,0,0,0.6),
+        0 0 80px rgba(0,229,255,0.12),
+        0 0 120px rgba(124,77,255,0.15);
+    }
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+  }
+</style>
+<script src="vendor/react.development.js"></script>
+<script src="vendor/react-dom.development.js"></script>
+<script src="vendor/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+(function () {
+  var v = '';
+  try { v = (new URLSearchParams(window.location.search || '')).get('v') || ''; } catch (e) { v = ''; }
+
+  var sources = [
+    'fa/tokens.jsx',
+    'fa/home.jsx',
+    'fa/predict.jsx',
+    'fa/rank.jsx',
+    'fa/matches.jsx',
+    'fa/profile.jsx',
+    'fa/notifs.jsx',
+    'fa/app.jsx',
+  ];
+
+  function showError(err) {
+    try {
+      var root = document.getElementById('root');
+      if (!root) return;
+      root.innerHTML = '<div style="padding:16px;font-family:system-ui;color:#fff;direction:rtl"><div style="font-weight:800;margin-bottom:8px">خطا در اجرای اپ</div><pre style="white-space:pre-wrap;background:rgba(255,255,255,0.06);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);overflow:auto;max-height:70vh"></pre></div>';
+      var pre = root.querySelector('pre');
+      if (pre) pre.textContent = String((err && (err.stack || err.message)) || err || 'Unknown error');
+    } catch (e) {}
+  }
+
+  function evalCode(js) {
+    (0, eval)(js);
+  }
+
+  function transform(code, filename) {
+    if (!window.Babel || typeof Babel.transform !== 'function') {
+      throw new Error('Babel Standalone is not available (missing Babel.transform).');
+    }
+
+    var optsList = [
+      { filename: filename, presets: ['env', 'react'] },
+      { filename: filename, presets: ['react'] },
+      { filename: filename },
+    ];
+
+    var lastErr = null;
+    for (var i = 0; i < optsList.length; i++) {
+      try {
+        return Babel.transform(code, optsList[i]).code;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error('Babel transform failed.');
+  }
+
+  (async function () {
+    try {
+      for (var i = 0; i < sources.length; i++) {
+        var src = sources[i];
+        var u = v ? (src + (src.indexOf('?') >= 0 ? '&' : '?') + 'v=' + encodeURIComponent(v)) : src;
+        var res = await fetch(u, { credentials: 'same-origin', cache: 'no-store' });
+        if (!res.ok) throw new Error('Failed to load ' + src + ' (' + res.status + ')');
+        var code = await res.text();
+        var js = transform(code, src);
+        evalCode(js);
+      }
+    } catch (err) {
+      showError(err);
+      try { console.error(err); } catch (e) {}
+    }
+  })();
+})();
+</script>
+</body>
+</html>

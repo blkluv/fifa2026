@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WP26 Predictor — Design System</title>
+<link rel="stylesheet" href="../assets/css/fonts.css" />
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #0B1020; font-family: 'Sora', system-ui, sans-serif; color: #fff; }
+  #root { width: 100%; height: 100vh; }
+  *::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  * { scrollbar-width: none; }
+</style>
+<script src="vendor/react.development.js"></script>
+<script src="vendor/react-dom.development.js"></script>
+<script src="vendor/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="browser-window.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tokens.jsx"></script>
+<script type="text/babel" src="screens/dashboard.jsx"></script>
+<script type="text/babel" src="screens/prediction.jsx"></script>
+<script type="text/babel" src="screens/leaderboard.jsx"></script>
+<script type="text/babel" src="screens/groups.jsx"></script>
+<script type="text/babel" src="screens/leagues.jsx"></script>
+<script type="text/babel" src="screens/profile.jsx"></script>
+<script type="text/babel" src="screens/notifications.jsx"></script>
+<script type="text/babel" src="screens/states.jsx"></script>
+<script type="text/babel" src="screens/admin.jsx"></script>
+
+<script type="text/babel" data-presets="env,react">
+const {
+  DesignCanvas, DCSection, DCArtboard, DCPostIt,
+  IOSDevice, BrowserWindow,
+  HomeScreen, PredictScreen, LeaderboardScreen, GroupsScreen,
+  LeaguesScreen, ProfileScreen, NotificationsScreen, StatesScreen, TokensScreen,
+  AdminScreen,
+} = window;
+
+// iOS frame wrapper at 402×874
+const Phone = ({ children, dark = true }) => (
+  <IOSDevice width={402} height={874} dark={dark}>
+    {children}
+  </IOSDevice>
+);
+
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection
+        id="overview"
+        title="WP26 Predictor"
+        subtitle="Premium FIFA-style prediction platform · Glass dark UI · Cyan/Violet accents"
+      >
+        <DCArtboard id="hero-home" label="01 · Home dashboard" width={402} height={874}>
+          <Phone><HomeScreen /></Phone>
+        </DCArtboard>
+        <DCArtboard id="predict" label="02 · Match prediction · interactive" width={402} height={874}>
+          <Phone><PredictScreen /></Phone>
+        </DCArtboard>
+        <DCArtboard id="leaderboard" label="03 · Live leaderboard" width={402} height={874}>
+          <Phone><LeaderboardScreen /></Phone>
+        </DCArtboard>
+        <DCArtboard id="groups" label="04 · Group standings" width={402} height={874}>
+          <Phone><GroupsScreen /></Phone>
+        </DCArtboard>
+        <DCArtboard id="leagues" label="05 · Mini leagues" width={402} height={874}>
+          <Phone><LeaguesScreen /></Phone>
+        </DCArtboard>
+        <DCArtboard id="profile" label="06 · Profile · badges" width={402} height={874}>
+          <Phone><ProfileScreen /></Phone>
+        </DCArtboard>
+        <DCArtboard id="notifs" label="07 · Notifications · toasts" width={402} height={874}>
+          <Phone><NotificationsScreen /></Phone>
+        </DCArtboard>
+        <DCArtboard id="states" label="08 · States · skeletons · errors" width={402} height={874}>
+          <Phone><StatesScreen /></Phone>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection
+        id="admin"
+        title="Admin console"
+        subtitle="Premium SaaS-style WordPress admin — NOT the default wp-admin chrome"
+      >
+        <DCArtboard id="admin-matches" label="Admin · Match management" width={1440} height={900}>
+          <AdminScreen />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection
+        id="system"
+        title="Design system"
+        subtitle="Colors, type, atoms — the vocabulary the screens speak"
+      >
+        <DCArtboard id="tokens" label="Tokens · Buttons · Chips · Crests" width={402} height={874}>
+          <Phone><TokensScreen /></Phone>
+        </DCArtboard>
+      </DCSection>
+
+      <DCPostIt top={120} left={40} width={220} rotate={-3}>
+        Match prediction (02) is interactive — tap +/–, toggle Joker, hit Lock in to see the success state.
+      </DCPostIt>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

@@ -1,0 +1,529 @@
+/* ============================================================
+   WC26 Predictor — Frontend Stylesheet
+   Aesthetic: dark-mode sports platform, editorial + utility
+   ============================================================ */
+
+/* Fonts are loaded locally via wp_enqueue_style('wc26-fonts') in FrontendLoader */
+
+/* ── CSS Variables ─────────────────────────────────────────── */
+:root {
+	--wc26-bg:        #0d0f14;
+	--wc26-surface:   #181c25;
+	--wc26-card:      #1f2433;
+	--wc26-border:    #2c3347;
+	--wc26-accent:    #e63946;
+	--wc26-gold:      #f4c430;
+	--wc26-green:     #2ec27e;
+	--wc26-blue:      #3d9cf0;
+	--wc26-muted:     #6b7280;
+	--wc26-text:      #f0f2f5;
+	--wc26-text-sm:   #9ca3af;
+	--wc26-radius:    12px;
+	--wc26-radius-sm: 6px;
+	--wc26-font-head: 'Vazirmatn', system-ui, sans-serif;
+	--wc26-font-body: 'Vazirmatn', system-ui, sans-serif;
+	--wc26-shadow:    0 4px 24px rgba(0,0,0,0.4);
+	--wc26-glow:      0 0 20px rgba(230, 57, 70, 0.3);
+}
+
+/* ── Reset ──────────────────────────────────────────────────── */
+#wc26-app, #wc26-app * {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+#wc26-app {
+	font-family: var(--wc26-font-body);
+	background: var(--wc26-bg);
+	color: var(--wc26-text);
+	min-height: 100vh;
+	padding: 1.5rem 1rem 4rem;
+	border-radius: var(--wc26-radius);
+	direction: rtl;
+}
+
+/* ── Top Bar ─────────────────────────────────────────────────── */
+.wc26-top-bar {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 1.5rem;
+	padding-bottom: 1rem;
+	border-bottom: 1px solid var(--wc26-border);
+}
+
+.wc26-user-rank {
+	font-size: 0.9rem;
+	color: var(--wc26-text-sm);
+}
+
+.wc26-user-rank strong {
+	color: var(--wc26-gold);
+	font-size: 1.1rem;
+}
+
+/* ── Notifications ───────────────────────────────────────────── */
+.wc26-notif-wrap { position: relative; }
+
+.wc26-notif-btn {
+	background: var(--wc26-card);
+	border: 1px solid var(--wc26-border);
+	border-radius: var(--wc26-radius-sm);
+	color: var(--wc26-text);
+	cursor: pointer;
+	font-size: 1.1rem;
+	padding: 0.4rem 0.7rem;
+	position: relative;
+	transition: background 0.2s;
+}
+
+.wc26-notif-btn:hover { background: var(--wc26-border); }
+
+.wc26-badge {
+	background: var(--wc26-accent);
+	border-radius: 50%;
+	color: #fff;
+	font-size: 0.65rem;
+	font-weight: 700;
+	min-width: 16px;
+	padding: 1px 4px;
+	position: absolute;
+	right: -4px;
+	top: -4px;
+}
+
+.wc26-notif-panel {
+	background: var(--wc26-card);
+	border: 1px solid var(--wc26-border);
+	border-radius: var(--wc26-radius);
+	box-shadow: var(--wc26-shadow);
+	max-height: 360px;
+	overflow-y: auto;
+	position: absolute;
+	right: 0;
+	top: calc(100% + 8px);
+	width: 320px;
+	z-index: 999;
+}
+
+.wc26-notif-header {
+	align-items: center;
+	border-bottom: 1px solid var(--wc26-border);
+	display: flex;
+	justify-content: space-between;
+	padding: 0.75rem 1rem;
+}
+
+.wc26-notif-item {
+	border-bottom: 1px solid var(--wc26-border);
+	padding: 0.75rem 1rem;
+}
+
+.wc26-notif-item p { color: var(--wc26-text-sm); font-size: 0.85rem; margin-top: 0.25rem; }
+.wc26-notif-empty  { color: var(--wc26-muted); padding: 1rem; text-align: center; }
+
+/* ── Tabs ────────────────────────────────────────────────────── */
+.wc26-tabs {
+	display: flex;
+	gap: 0.5rem;
+	margin-bottom: 1.5rem;
+}
+
+.wc26-tab {
+	background: var(--wc26-card);
+	border: 1px solid var(--wc26-border);
+	border-radius: var(--wc26-radius-sm);
+	color: var(--wc26-text-sm);
+	cursor: pointer;
+	font-family: var(--wc26-font-body);
+	font-size: 0.9rem;
+	font-weight: 600;
+	padding: 0.5rem 1.25rem;
+	transition: all 0.2s;
+}
+
+.wc26-tab.active, .wc26-tab:hover {
+	background: var(--wc26-accent);
+	border-color: var(--wc26-accent);
+	color: #fff;
+}
+
+/* ── Cards ───────────────────────────────────────────────────── */
+.wc26-card {
+	background: var(--wc26-card);
+	border: 1px solid var(--wc26-border);
+	border-radius: var(--wc26-radius);
+	padding: 1.5rem;
+}
+
+.wc26-text-center { text-align: center; }
+.wc26-icon { font-size: 2.5rem; display: block; margin-bottom: 0.5rem; }
+
+/* ── Match Cards Grid ────────────────────────────────────────── */
+.wc26-matches-grid {
+	display: grid;
+	gap: 1rem;
+}
+
+.wc26-match-card {
+	background: var(--wc26-card);
+	border: 1px solid var(--wc26-border);
+	border-radius: var(--wc26-radius);
+	overflow: hidden;
+	padding: 1.25rem;
+	position: relative;
+	transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.wc26-match-card:hover {
+	box-shadow: var(--wc26-glow);
+	transform: translateY(-2px);
+}
+
+.wc26-match-card.locked {
+	opacity: 0.75;
+}
+
+.wc26-match-card.has-prediction {
+	border-left: 3px solid var(--wc26-green);
+}
+
+.wc26-stage-badge {
+	background: rgba(230, 57, 70, 0.15);
+	border: 1px solid rgba(230, 57, 70, 0.3);
+	border-radius: 4px;
+	color: var(--wc26-accent);
+	display: inline-block;
+	font-size: 0.7rem;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	margin-bottom: 0.75rem;
+	padding: 2px 8px;
+	text-transform: uppercase;
+}
+
+.wc26-countdown {
+	color: var(--wc26-text-sm);
+	font-size: 0.8rem;
+	margin-bottom: 1rem;
+	position: absolute;
+	right: 1.25rem;
+	top: 1.25rem;
+}
+
+/* ── Teams Row ───────────────────────────────────────────────── */
+.wc26-teams-row {
+	align-items: center;
+	display: grid;
+	gap: 1rem;
+	grid-template-columns: 1fr auto 1fr;
+}
+
+.wc26-team {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.4rem;
+}
+
+.wc26-flag {
+	border-radius: 4px;
+	height: 36px;
+	object-fit: cover;
+	width: 54px;
+}
+
+.wc26-team-name {
+	font-weight: 600;
+	font-size: 0.9rem;
+	text-align: center;
+}
+
+.wc26-team-code {
+	color: var(--wc26-muted);
+	font-family: var(--wc26-font-head);
+	font-size: 1rem;
+	letter-spacing: 0.1em;
+}
+
+/* ── Score Inputs ────────────────────────────────────────────── */
+.wc26-score-form {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.wc26-score-inputs {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.wc26-score-inputs > * { width: 100%; display: flex; flex-direction: column; align-items: center; }
+
+.wc26-score-inputs input, .wc26-score-form > div:first-child {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.wc26-score-input {
+	background: var(--wc26-surface);
+	border: 2px solid var(--wc26-border);
+	border-radius: var(--wc26-radius-sm);
+	color: var(--wc26-text);
+	font-family: var(--wc26-font-head);
+	font-size: 1.6rem;
+	text-align: center;
+	width: 52px;
+	padding: 0.3rem 0;
+	transition: border-color 0.2s;
+}
+
+.wc26-score-input:focus {
+	border-color: var(--wc26-accent);
+	outline: none;
+}
+
+.wc26-score-input:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.wc26-separator {
+	color: var(--wc26-muted);
+	font-family: var(--wc26-font-head);
+	font-size: 1.5rem;
+}
+
+/* ── Score form internal flex ────────────────────────────────── */
+.wc26-score-form {
+	align-items: center;
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+}
+
+.wc26-score-form > div:first-child {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+
+.wc26-submit-row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+	justify-content: center;
+}
+
+.wc26-joker-label {
+	color: var(--wc26-gold);
+	cursor: pointer;
+	font-size: 0.8rem;
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+.wc26-locked-score {
+	font-family: var(--wc26-font-head);
+	font-size: 1.8rem;
+	color: var(--wc26-text-sm);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+.wc26-btn {
+	border: none;
+	border-radius: var(--wc26-radius-sm);
+	cursor: pointer;
+	font-family: var(--wc26-font-body);
+	font-size: 0.85rem;
+	font-weight: 700;
+	padding: 0.45rem 1rem;
+	transition: all 0.2s;
+}
+
+.wc26-btn-primary {
+	background: var(--wc26-accent);
+	color: #fff;
+	display: inline-block;
+	text-decoration: none;
+	margin-top: 1rem;
+}
+
+.wc26-btn-primary:hover { background: #c92e3b; }
+
+.wc26-btn-predict {
+	background: var(--wc26-accent);
+	color: #fff;
+}
+
+.wc26-btn-predict:hover:not(:disabled) { background: #c92e3b; }
+.wc26-btn-predict:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.wc26-link {
+	background: none;
+	border: none;
+	color: var(--wc26-blue);
+	cursor: pointer;
+	font-size: 0.8rem;
+	text-decoration: underline;
+}
+
+/* ── Feedback ────────────────────────────────────────────────── */
+.wc26-feedback {
+	border-radius: var(--wc26-radius-sm);
+	font-size: 0.8rem;
+	margin-top: 0.25rem;
+	padding: 0.25rem 0.75rem;
+}
+
+.wc26-feedback.success { background: rgba(46,194,126,0.15); color: var(--wc26-green); }
+.wc26-feedback.error   { background: rgba(230,57,70,0.15);  color: var(--wc26-accent); }
+
+/* ── Venue ───────────────────────────────────────────────────── */
+.wc26-venue {
+	color: var(--wc26-muted);
+	font-size: 0.75rem;
+	margin-top: 0.75rem;
+	text-align: center;
+}
+
+/* ── My Picks ────────────────────────────────────────────────── */
+.wc26-my-picks { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.wc26-pick-row {
+	align-items: center;
+	background: var(--wc26-card);
+	border: 1px solid var(--wc26-border);
+	border-left: 4px solid var(--wc26-border);
+	border-radius: var(--wc26-radius-sm);
+	display: flex;
+	gap: 1rem;
+	padding: 0.6rem 1rem;
+}
+
+.wc26-pick-row.exact    { border-left-color: var(--wc26-gold); }
+.wc26-pick-row.goal_diff { border-left-color: var(--wc26-blue); }
+.wc26-pick-row.winner   { border-left-color: var(--wc26-green); }
+.wc26-pick-row.draw     { border-left-color: var(--wc26-green); }
+.wc26-pick-row.miss     { border-left-color: var(--wc26-accent); }
+
+.wc26-pick-score { font-family: var(--wc26-font-head); font-size: 1.2rem; }
+.wc26-pick-type  { color: var(--wc26-text-sm); font-size: 0.8rem; }
+.wc26-pick-pts   { font-weight: 700; margin-left: auto; }
+.wc26-pick-pts   { color: var(--wc26-gold); }
+.wc26-joker-tag  { font-size: 1rem; }
+
+/* ── Skeleton ────────────────────────────────────────────────── */
+.wc26-skeleton-wrap { display: flex; flex-direction: column; gap: 1rem; }
+
+.wc26-skeleton {
+	animation: wc26-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes wc26-pulse {
+	0%, 100% { opacity: 1; }
+	50%       { opacity: 0.4; }
+}
+
+.wc26-sk-line {
+	background: var(--wc26-border);
+	border-radius: 4px;
+	height: 14px;
+	margin: 0.5rem 0;
+}
+
+.wc26-sk-sm { width: 30%; }
+.wc26-sk-md { width: 60%; }
+.wc26-sk-lg { width: 90%; }
+
+/* ── Auth Wall ───────────────────────────────────────────────── */
+.wc26-auth-wall { padding: 2rem 0; }
+
+.wc26-auth-wall h2 {
+	font-family: var(--wc26-font-head);
+	font-size: 2rem;
+	margin-bottom: 0.5rem;
+}
+
+/* ── Muted ───────────────────────────────────────────────────── */
+.wc26-muted { color: var(--wc26-muted); }
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 600px) {
+	.wc26-teams-row {
+		grid-template-columns: 1fr;
+		justify-items: center;
+	}
+
+	.wc26-score-inputs { width: 100%; }
+
+	.wc26-countdown {
+		position: static;
+		margin-bottom: 0.5rem;
+	}
+
+	.wc26-pick-row { flex-wrap: wrap; }
+}
+
+/* ── Leaderboard ─────────────────────────────────────────────── */
+.wc26-leaderboard-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.9rem;
+}
+
+.wc26-leaderboard-table th {
+	background: var(--wc26-surface);
+	color: var(--wc26-muted);
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.05em;
+	padding: 0.5rem 0.75rem;
+	text-align: right;
+	text-transform: uppercase;
+}
+
+.wc26-leaderboard-table td {
+	border-bottom: 1px solid var(--wc26-border);
+	padding: 0.6rem 0.75rem;
+}
+
+.wc26-leaderboard-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+.wc26-rank-1 td:first-child { color: var(--wc26-gold); font-weight: 700; }
+.wc26-rank-2 td:first-child { color: #c0c0c0; font-weight: 700; }
+.wc26-rank-3 td:first-child { color: #cd7f32; font-weight: 700; }
+
+/* ── Standings ───────────────────────────────────────────────── */
+.wc26-standings-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.85rem;
+}
+
+.wc26-standings-table th {
+	background: var(--wc26-surface);
+	color: var(--wc26-muted);
+	font-size: 0.7rem;
+	padding: 0.4rem 0.5rem;
+	text-align: center;
+	text-transform: uppercase;
+}
+
+.wc26-standings-table th:first-child { text-align: left; }
+
+.wc26-standings-table td {
+	border-bottom: 1px solid var(--wc26-border);
+	padding: 0.5rem;
+	text-align: center;
+}
+
+.wc26-standings-table td:first-child { text-align: left; display: flex; align-items: center; gap: 0.5rem; }
+.wc26-standings-table .wc26-flag { height: 20px; width: 30px; }

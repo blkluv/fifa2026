@@ -1,0 +1,17 @@
+fifa_id,name,short_name,code,flag_url,continent
+FIFA001,Brazil,Brazil,BRA,https://cdn.example.com/flags/bra.png,CONMEBOL
+FIFA002,Germany,Germany,GER,https://cdn.example.com/flags/ger.png,UEFA
+FIFA003,France,France,FRA,https://cdn.example.com/flags/fra.png,UEFA
+FIFA004,Argentina,Argentina,ARG,https://cdn.example.com/flags/arg.png,CONMEBOL
+FIFA005,England,England,ENG,https://cdn.example.com/flags/eng.png,UEFA
+FIFA006,Spain,Spain,ESP,https://cdn.example.com/flags/esp.png,UEFA
+FIFA007,Portugal,Portugal,POR,https://cdn.example.com/flags/por.png,UEFA
+FIFA008,Netherlands,Netherlands,NED,https://cdn.example.com/flags/ned.png,UEFA
+FIFA009,USA,United States,USA,https://cdn.example.com/flags/usa.png,CONCACAF
+FIFA010,Mexico,Mexico,MEX,https://cdn.example.com/flags/mex.png,CONCACAF
+FIFA011,Canada,Canada,CAN,https://cdn.example.com/flags/can.png,CONCACAF
+FIFA012,Japan,Japan,JPN,https://cdn.example.com/flags/jpn.png,AFC
+FIFA013,South Korea,South Korea,KOR,https://cdn.example.com/flags/kor.png,AFC
+FIFA014,Morocco,Morocco,MAR,https://cdn.example.com/flags/mar.png,CAF
+FIFA015,Senegal,Senegal,SEN,https://cdn.example.com/flags/sen.png,CAF
+FIFA016,Australia,Australia,AUS,https://cdn.example.com/flags/aus.png,AFC
