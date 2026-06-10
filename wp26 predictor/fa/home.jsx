@@ -88,9 +88,19 @@ function FaHome({ go }) {
               width: 40, height: 40, borderRadius: 12,
               background: `linear-gradient(135deg, ${T.cyan}, ${T.violet})`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 800, color: '#06121C', fontSize: 14, letterSpacing: '-0.04em', direction: 'ltr',
               boxShadow: `0 0 24px ${T.cyan}55`,
-            }}>۲۶</div>
+              overflow: 'hidden',
+            }}>
+              {me?.avatar ? (
+                <img
+                  src={me.avatar}
+                  alt={displayName}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+              ) : (
+                <div style={{ fontWeight: 800, color: '#06121C', fontSize: 14, letterSpacing: '-0.04em', direction: 'ltr' }}>{initial}</div>
+              )}
+            </div>
             <div>
               <div style={{ fontFamily: T.body, fontSize: 11, color: T.textDim, fontWeight: 500 }}>پیش‌بین جام جهانی ۲۰۲۶</div>
               <div style={{ fontFamily: T.display, fontSize: 16, fontWeight: 800, color: T.text, letterSpacing: '-0.02em' }}>{displayName}</div>
