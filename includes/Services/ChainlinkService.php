@@ -1,3 +1,4 @@
+require_once WC26_PLUGIN_DIR . 'includes/Repositories/Repositories.php';
 <?php
 /**
  * Chainlink CRE Service - manages DON reports and settlement
