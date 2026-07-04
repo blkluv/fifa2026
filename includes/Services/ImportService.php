@@ -107,3 +107,23 @@ class ImportService {
 		$wpdb->query( "TRUNCATE {$wpdb->prefix}wc26_chainlink_reports" );
 	}
 }
+/**
+ * Import real estate data from external API
+ */
+public function importRealEstateDataFromAPI(): array {
+	// This is a placeholder - implement actual API integration
+	// For now, return empty stats
+	return [
+		'properties' => 0,
+		'regions' => 0,
+		'markets' => 0,
+	];
+}
+
+/**
+ * Update market data from external API
+ */
+public function updateMarketDataFromAPI(): int {
+	// This is a placeholder - implement actual API integration
+	return 0;
+}
