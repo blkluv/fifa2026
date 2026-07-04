@@ -2,6 +2,8 @@
 /**
  * Concrete repository classes for every custom table.
  *
+ * Adapted for Real Estate Prediction Market with Chainlink CRE Integration
+ *
  * @package WC26Predictor\Repositories
  */
 
@@ -9,39 +11,54 @@ declare(strict_types=1);
 
 namespace WC26Predictor\Repositories;
 
-// ── Teams ─────────────────────────────────────────────────────────────────────
+// ── Properties (replaces Teams) ─────────────────────────────────────────────
 
-class TeamRepository extends AbstractRepository {
-	protected function getTableName(): string { return 'wc26_teams'; }
+class PropertyRepository extends AbstractRepository {
+	protected function getTableName(): string { return 'wc26_properties'; }
 
 	/** @return array<int,array<string,mixed>> */
-	public function findByContinent( string $continent ): array {
-		return $this->findBy( [ 'continent' => $continent ], 'name' );
+	public function findByRegion( int $regionId ): array {
+		return $this->findBy( [ 'region_id' => $regionId ], 'name' );
+	}
+
+	/** @return array<int,array<string,mixed>> */
+	public function findByType( string $type ): array {
+		return $this->findBy( [ 'property_type' => $type ], 'name' );
+	}
+
+	/** @return array<int,array<string,mixed>> */
+	public function findByCity( string $city ): array {
+		return $this->findBy( [ 'city' => $city ], 'name' );
 	}
 }
 
-// ── Groups ────────────────────────────────────────────────────────────────────
+// ── Regions (replaces Groups) ───────────────────────────────────────────────
 
-class GroupRepository extends AbstractRepository {
-	protected function getTableName(): string { return 'wc26_groups'; }
+class RegionRepository extends AbstractRepository {
+	protected function getTableName(): string { return 'wc26_regions'; }
 
 	/** @return array<int,array<string,mixed>> */
-	public function findBySeason( string $season ): array {
-		return $this->findBy( [ 'season' => $season ], 'name' );
+	public function findByCountry( string $country ): array {
+		return $this->findBy( [ 'country' => $country ], 'name' );
+	}
+
+	/** @return array<int,array<string,mixed>> */
+	public function findByState( string $state ): array {
+		return $this->findBy( [ 'state' => $state ], 'name' );
 	}
 }
 
-// ── Matches ───────────────────────────────────────────────────────────────────
+// ── Markets (replaces Matches) ──────────────────────────────────────────────
 
-class MatchRepository extends AbstractRepository {
-	protected function getTableName(): string { return 'wc26_matches'; }
+class MarketRepository extends AbstractRepository {
+	protected function getTableName(): string { return 'wc26_markets'; }
 
 	/** @return array<int,array<string,mixed>> */
-	public function findUpcoming( int $limit = 10 ): array {
+	public function findActive( int $limit = 10 ): array {
 		$sql = $this->wpdb->prepare(
 			"SELECT * FROM {$this->table}
-			 WHERE status = 'scheduled' AND kickoff_at > NOW()
-			 ORDER BY kickoff_at ASC
+			 WHERE status = 'active' AND forecast_date > NOW()
+			 ORDER BY forecast_date ASC
 			 LIMIT %d",
 			$limit
 		);
@@ -49,58 +66,65 @@ class MatchRepository extends AbstractRepository {
 	}
 
 	/** @return array<int,array<string,mixed>> */
-	public function findByStage( string $stage ): array {
-		return $this->findBy( [ 'stage' => $stage ], 'kickoff_at' );
+	public function findPending(): array {
+		return $this->findBy( [ 'status' => 'pending' ], 'forecast_date' );
 	}
 
 	/** @return array<int,array<string,mixed>> */
-	public function findFinished(): array {
-		return $this->findBy( [ 'status' => 'finished' ], 'kickoff_at', 'DESC' );
+	public function findSettled(): array {
+		return $this->findBy( [ 'status' => 'settled' ], 'forecast_date', 'DESC' );
 	}
 
-	public function findWithTeams( int $matchId ): ?array {
+	public function findWithDetails( int $marketId ): ?array {
 		global $wpdb;
 		$m  = $this->table;
-		$t  = $wpdb->prefix . 'wc26_teams';
+		$p  = $wpdb->prefix . 'wc26_properties';
+		$r  = $wpdb->prefix . 'wc26_regions';
 		$sql = $wpdb->prepare(
 			"SELECT m.*,
-			        ht.name AS home_team_name, ht.code AS home_team_code, ht.flag_url AS home_flag,
-			        at.name AS away_team_name, at.code AS away_team_code, at.flag_url AS away_flag
+			        p.name AS property_name, p.property_type, p.city,
+			        r.name AS region_name, r.country, r.state
 			 FROM {$m} m
-			 LEFT JOIN {$t} ht ON ht.id = m.home_team_id
-			 LEFT JOIN {$t} at ON at.id = m.away_team_id
+			 LEFT JOIN {$p} p ON p.id = m.property_id
+			 LEFT JOIN {$r} r ON r.id = m.region_id
 			 WHERE m.id = %d LIMIT 1",
-			$matchId
+			$marketId
 		);
 		$row = $wpdb->get_row( $sql, ARRAY_A );
 		return $row ?: null;
 	}
 
 	/** @return array<int,array<string,mixed>> */
-	public function findAllWithTeams(): array {
+	public function findAllWithDetails(): array {
 		global $wpdb;
 		$m = $this->table;
-		$t = $wpdb->prefix . 'wc26_teams';
+		$p = $wpdb->prefix . 'wc26_properties';
+		$r = $wpdb->prefix . 'wc26_regions';
 		$sql = "SELECT m.*,
-		               ht.name AS home_team_name, ht.code AS home_team_code, ht.flag_url AS home_flag,
-		               at.name AS away_team_name, at.code AS away_team_code, at.flag_url AS away_flag
+		               p.name AS property_name, p.property_type, p.city,
+		               r.name AS region_name, r.country, r.state
 		        FROM {$m} m
-		        LEFT JOIN {$t} ht ON ht.id = m.home_team_id
-		        LEFT JOIN {$t} at ON at.id = m.away_team_id
-		        ORDER BY m.kickoff_at ASC";
+		        LEFT JOIN {$p} p ON p.id = m.property_id
+		        LEFT JOIN {$r} r ON r.id = m.region_id
+		        ORDER BY m.forecast_date ASC";
 		return $wpdb->get_results( $sql, ARRAY_A ) ?: [];
+	}
+
+	/** @return array<int,array<string,mixed>> */
+	public function findByRegion( int $regionId ): array {
+		return $this->findBy( [ 'region_id' => $regionId ], 'forecast_date' );
 	}
 }
 
-// ── Predictions ───────────────────────────────────────────────────────────────
+// ── Predictions (adapted for real estate) ────────────────────────────────────
 
 class PredictionRepository extends AbstractRepository {
 	protected function getTableName(): string { return 'wc26_predictions'; }
 
-	public function findByUserAndMatch( int $userId, int $matchId ): ?array {
+	public function findByUserAndMarket( int $userId, int $marketId ): ?array {
 		$sql = $this->wpdb->prepare(
-			"SELECT * FROM {$this->table} WHERE user_id = %d AND match_id = %d LIMIT 1",
-			$userId, $matchId
+			"SELECT * FROM {$this->table} WHERE user_id = %d AND market_id = %d LIMIT 1",
+			$userId, $marketId
 		);
 		$row = $this->wpdb->get_row( $sql, ARRAY_A );
 		return $row ?: null;
@@ -112,87 +136,152 @@ class PredictionRepository extends AbstractRepository {
 	}
 
 	/** @return array<int,array<string,mixed>> */
-	public function findByUserWithMatches( int $userId ): array {
+	public function findByUserWithMarkets( int $userId ): array {
 		global $wpdb;
 		$p  = $this->table;
-		$m  = $wpdb->prefix . 'wc26_matches';
-		$t  = $wpdb->prefix . 'wc26_teams';
+		$m  = $wpdb->prefix . 'wc26_markets';
+		$pr = $wpdb->prefix . 'wc26_properties';
+		$r  = $wpdb->prefix . 'wc26_regions';
 		$sql = $wpdb->prepare(
 			"SELECT p.*,
-			        m.kickoff_at, m.stage, m.venue,
-			        m.status        AS match_status,
-			        m.home_score    AS real_home_score,
-			        m.away_score    AS real_away_score,
-			        ht.name         AS home_team_name,
-			        ht.code         AS home_team_code,
-			        ht.flag_url     AS home_flag,
-			        at.name         AS away_team_name,
-			        at.code         AS away_team_code,
-			        at.flag_url     AS away_flag
+			        m.forecast_date, m.initial_price, m.final_price, m.price_change_pct, m.market_trend,
+			        m.status        AS market_status,
+			        pr.name         AS property_name,
+			        pr.property_type,
+			        pr.city,
+			        r.name          AS region_name,
+			        r.country
 			 FROM {$p} p
-			 JOIN {$m} m  ON m.id  = p.match_id
-			 LEFT JOIN {$t} ht ON ht.id = m.home_team_id
-			 LEFT JOIN {$t} at ON at.id = m.away_team_id
+			 JOIN {$m} m ON m.id = p.market_id
+			 LEFT JOIN {$pr} pr ON pr.id = m.property_id
+			 LEFT JOIN {$r} r ON r.id = m.region_id
 			 WHERE p.user_id = %d
-			 ORDER BY m.kickoff_at DESC",
+			 ORDER BY m.forecast_date DESC",
 			$userId
 		);
 		return $wpdb->get_results( $sql, ARRAY_A ) ?: [];
 	}
 
 	/** @return array<int,array<string,mixed>> */
-	public function findByMatch( int $matchId ): array {
-		return $this->findBy( [ 'match_id' => $matchId ] );
+	public function findByMarket( int $marketId ): array {
+		return $this->findBy( [ 'market_id' => $marketId ] );
 	}
 
-	public function upsert( int $userId, int $matchId, int $homeScore, int $awayScore, bool $isJoker = false ): int {
-		$existing = $this->findByUserAndMatch( $userId, $matchId );
+	/** @return array<int,array<string,mixed>> */
+	public function getMarketStats( int $marketId ): array {
+		global $wpdb;
+		$p = $this->table;
+		$sql = $wpdb->prepare(
+			"SELECT
+				COUNT(*) AS total_predictions,
+				AVG(predicted_price) AS avg_predicted_price,
+				MIN(predicted_price) AS min_price,
+				MAX(predicted_price) AS max_price,
+				SUM(CASE WHEN predicted_trend = 'increase' THEN 1 ELSE 0 END) AS trend_up,
+				SUM(CASE WHEN predicted_trend = 'decrease' THEN 1 ELSE 0 END) AS trend_down,
+				SUM(CASE WHEN predicted_trend = 'stable' THEN 1 ELSE 0 END) AS trend_stable
+			FROM {$p}
+			WHERE market_id = %d",
+			$marketId
+		);
+		return $wpdb->get_row( $sql, ARRAY_A ) ?: [];
+	}
+
+	public function upsert( int $userId, int $marketId, ?float $predictedPrice, string $predictedTrend, ?string $predictedRange = null, bool $isJoker = false ): int {
+		$existing = $this->findByUserAndMarket( $userId, $marketId );
+
+		$data = [
+			'predicted_price' => $predictedPrice,
+			'predicted_trend' => $predictedTrend,
+			'predicted_range' => $predictedRange,
+			'is_joker'        => (int) $isJoker,
+		];
 
 		if ( $existing ) {
-			$this->update(
-				[
-					'pred_home_score' => $homeScore,
-					'pred_away_score' => $awayScore,
-					'is_joker'        => (int) $isJoker,
-				],
-				[ 'id' => $existing['id'] ]
-			);
+			$this->update( $data, [ 'id' => $existing['id'] ] );
 			return (int) $existing['id'];
 		}
 
-		return $this->insert( [
-			'user_id'         => $userId,
-			'match_id'        => $matchId,
-			'pred_home_score' => $homeScore,
-			'pred_away_score' => $awayScore,
-			'is_joker'        => (int) $isJoker,
-		] );
+		$data['user_id'] = $userId;
+		$data['market_id'] = $marketId;
+		return $this->insert( $data );
 	}
 }
 
-// ── Standings ─────────────────────────────────────────────────────────────────
+// ── Standings (adapted for real estate) ──────────────────────────────────────
 
 class StandingsRepository extends AbstractRepository {
 	protected function getTableName(): string { return 'wc26_standings'; }
 
 	/** @return array<int,array<string,mixed>> */
-	public function findByGroup( int $groupId ): array {
+	public function findByRegion( int $regionId ): array {
 		global $wpdb;
 		$s = $this->table;
-		$t = $wpdb->prefix . 'wc26_teams';
+		$u = $wpdb->users;
 		$sql = $wpdb->prepare(
-			"SELECT st.*, tm.name AS team_name, tm.code, tm.flag_url
+			"SELECT st.*, u.display_name, u.user_login
 			 FROM {$s} st
-			 JOIN {$t} tm ON tm.id = st.team_id
-			 WHERE st.group_id = %d
-			 ORDER BY st.points DESC, st.goal_difference DESC, st.goals_for DESC",
-			$groupId
+			 JOIN {$u} u ON u.ID = st.user_id
+			 WHERE st.region_id = %d
+			 ORDER BY st.total_points DESC, st.exact_hits DESC",
+			$regionId
 		);
 		return $wpdb->get_results( $sql, ARRAY_A ) ?: [];
 	}
+
+	public function upsertUser( int $regionId, int $userId, int $pointsDelta, string $type ): void {
+		global $wpdb;
+		$t = $this->table;
+
+		$exactDelta = ( $type === 'exact' ) ? 1 : 0;
+		$trendDelta = ( $type === 'trend' ) ? 1 : 0;
+		$rangeDelta = ( $type === 'range' ) ? 1 : 0;
+
+		$wpdb->query( $wpdb->prepare(
+			"INSERT INTO {$t} (region_id, user_id, total_points, exact_hits, trend_hits, range_hits, total_predictions)
+			 VALUES (%d, %d, %d, %d, %d, %d, 1)
+			 ON DUPLICATE KEY UPDATE
+			   total_points      = total_points + %d,
+			   exact_hits        = exact_hits + %d,
+			   trend_hits        = trend_hits + %d,
+			   range_hits        = range_hits + %d,
+			   total_predictions = total_predictions + 1",
+			$regionId, $userId, $pointsDelta, $exactDelta, $trendDelta, $rangeDelta,
+			$pointsDelta, $exactDelta, $trendDelta, $rangeDelta
+		) );
+	}
+
+	public function rebuildForRegion( int $regionId ): void {
+		global $wpdb;
+		$t  = $this->table;
+		$tP = $wpdb->prefix . 'wc26_predictions';
+		$tM = $wpdb->prefix . 'wc26_markets';
+
+		$wpdb->query( $wpdb->prepare(
+			"DELETE FROM {$t} WHERE region_id = %d",
+			$regionId
+		) );
+
+		$wpdb->query( $wpdb->prepare(
+			"INSERT INTO {$t} (region_id, user_id, total_points, exact_hits, trend_hits, range_hits, total_predictions)
+			 SELECT
+			   %d AS region_id,
+			   p.user_id,
+			   COALESCE(SUM(p.earned_points), 0) AS total_points,
+			   SUM(CASE WHEN p.prediction_type = 'exact' THEN 1 ELSE 0 END) AS exact_hits,
+			   SUM(CASE WHEN p.prediction_type = 'trend' THEN 1 ELSE 0 END) AS trend_hits,
+			   SUM(CASE WHEN p.prediction_type = 'range' THEN 1 ELSE 0 END) AS range_hits,
+			   COUNT(p.id) AS total_predictions
+			 FROM {$tP} p
+			 JOIN {$tM} m ON m.id = p.market_id
+			 WHERE m.region_id = %d AND m.status = 'settled'
+			 GROUP BY p.user_id",
+			$regionId, $regionId
+		) );
+	}
 }
 
-// ── Leaderboards ──────────────────────────────────────────────────────────────
+// ── Leaderboards (adapted for real estate) ──────────────────────────────────
 
 class LeaderboardRepository extends AbstractRepository {
 	protected function getTableName(): string { return 'wc26_leaderboards'; }
@@ -201,7 +290,7 @@ class LeaderboardRepository extends AbstractRepository {
 		global $wpdb;
 		$t = $this->table;
 		$wpdb->query( $wpdb->prepare(
-			"INSERT IGNORE INTO {$t} (user_id, total_points, exact_hits, goal_diff_hits, winner_hits)
+			"INSERT IGNORE INTO {$t} (user_id, total_points, exact_hits, trend_hits, range_hits)
 			 VALUES (%d, 0, 0, 0, 0)",
 			$userId
 		) );
@@ -222,33 +311,43 @@ class LeaderboardRepository extends AbstractRepository {
 		return $wpdb->get_results( $sql, ARRAY_A ) ?: [];
 	}
 
-	public function upsertUser( int $userId, int $pointsDelta, string $type ): void {
+	/** @return array<int,array<string,mixed>> */
+	public function getRegionTop( int $regionId, int $limit = 100 ): array {
+		global $wpdb;
+		$l = $this->table;
+		$sql = $wpdb->prepare(
+			"SELECT lb.*, u.display_name
+			 FROM {$l} lb
+			 JOIN {$wpdb->users} u ON u.ID = lb.user_id
+			 WHERE lb.region_id = %d
+			 ORDER BY lb.total_points DESC, lb.exact_hits DESC
+			 LIMIT %d",
+			$regionId, $limit
+		);
+		return $wpdb->get_results( $sql, ARRAY_A ) ?: [];
+	}
+
+	public function upsertUser( int $userId, int $regionId, int $pointsDelta, string $type ): void {
 		global $wpdb;
 		$t = $this->table;
 
-		$exactDelta    = ( $type === 'exact' ) ? 1 : 0;
-		$goalDiffDelta = ( $type === 'goal_diff' ) ? 1 : 0;
-		$winnerDelta   = ( $type === 'winner' || $type === 'draw' ) ? 1 : 0;
+		$exactDelta = ( $type === 'exact' ) ? 1 : 0;
+		$trendDelta = ( $type === 'trend' ) ? 1 : 0;
+		$rangeDelta = ( $type === 'range' ) ? 1 : 0;
 
 		$wpdb->query( $wpdb->prepare(
-			"INSERT INTO {$t} (user_id, total_points, exact_hits, goal_diff_hits, winner_hits)
-			 VALUES (%d, %d, %d, %d, %d)
+			"INSERT INTO {$t} (user_id, region_id, total_points, exact_hits, trend_hits, range_hits)
+			 VALUES (%d, %d, %d, %d, %d, %d)
 			 ON DUPLICATE KEY UPDATE
-			   total_points   = total_points   + %d,
-			   exact_hits     = exact_hits     + %d,
-			   goal_diff_hits = goal_diff_hits + %d,
-			   winner_hits    = winner_hits    + %d",
-			$userId, $pointsDelta, $exactDelta, $goalDiffDelta, $winnerDelta,
-			$pointsDelta, $exactDelta, $goalDiffDelta, $winnerDelta
+			   total_points = total_points + %d,
+			   exact_hits   = exact_hits + %d,
+			   trend_hits   = trend_hits + %d,
+			   range_hits   = range_hits + %d",
+			$userId, $regionId, $pointsDelta, $exactDelta, $trendDelta, $rangeDelta,
+			$pointsDelta, $exactDelta, $trendDelta, $rangeDelta
 		) );
 	}
 
-	/**
-	 * Rebuild leaderboard rows for specific users from their actual prediction data.
-	 * This is authoritative — always correct, never double-counts.
-	 *
-	 * @param int[] $userIds
-	 */
 	public function rebuildForUsers( array $userIds ): void {
 		global $wpdb;
 		if ( empty( $userIds ) ) {
@@ -257,45 +356,56 @@ class LeaderboardRepository extends AbstractRepository {
 
 		$t  = $this->table;
 		$tP = $wpdb->prefix . 'wc26_predictions';
-		$tM = $wpdb->prefix . 'wc26_matches';
+		$tM = $wpdb->prefix . 'wc26_markets';
 
 		foreach ( $userIds as $uid ) {
 			$uid = (int) $uid;
 			$row = $wpdb->get_row( $wpdb->prepare(
 				"SELECT
-					COALESCE(SUM(p.earned_points), 0)                                          AS total_points,
-					SUM(CASE WHEN p.prediction_type = 'exact'            THEN 1 ELSE 0 END)    AS exact_hits,
-					SUM(CASE WHEN p.prediction_type = 'goal_diff'        THEN 1 ELSE 0 END)    AS goal_diff_hits,
-					SUM(CASE WHEN p.prediction_type IN ('winner','draw')  THEN 1 ELSE 0 END)    AS winner_hits
+					COALESCE(SUM(p.earned_points), 0) AS total_points,
+					SUM(CASE WHEN p.prediction_type = 'exact' THEN 1 ELSE 0 END) AS exact_hits,
+					SUM(CASE WHEN p.prediction_type = 'trend' THEN 1 ELSE 0 END) AS trend_hits,
+					SUM(CASE WHEN p.prediction_type = 'range' THEN 1 ELSE 0 END) AS range_hits
 				 FROM {$tP} p
-				 JOIN {$tM} m ON m.id = p.match_id
-				 WHERE p.user_id = %d AND m.status = 'finished'",
+				 JOIN {$tM} m ON m.id = p.market_id
+				 WHERE p.user_id = %d AND m.status = 'settled'",
 				$uid
 			), ARRAY_A );
 
-			$wpdb->query( $wpdb->prepare(
-				"INSERT INTO {$t} (user_id, total_points, exact_hits, goal_diff_hits, winner_hits)
-				 VALUES (%d, %d, %d, %d, %d)
-				 ON DUPLICATE KEY UPDATE
-				   total_points   = VALUES(total_points),
-				   exact_hits     = VALUES(exact_hits),
-				   goal_diff_hits = VALUES(goal_diff_hits),
-				   winner_hits    = VALUES(winner_hits)",
-				$uid,
-				(int) ( $row['total_points']  ?? 0 ),
-				(int) ( $row['exact_hits']    ?? 0 ),
-				(int) ( $row['goal_diff_hits'] ?? 0 ),
-				(int) ( $row['winner_hits']   ?? 0 )
-			) );
+			if ( $row ) {
+				$wpdb->query( $wpdb->prepare(
+					"INSERT INTO {$t} (user_id, total_points, exact_hits, trend_hits, range_hits)
+					 VALUES (%d, %d, %d, %d, %d)
+					 ON DUPLICATE KEY UPDATE
+					   total_points = VALUES(total_points),
+					   exact_hits   = VALUES(exact_hits),
+					   trend_hits   = VALUES(trend_hits),
+					   range_hits   = VALUES(range_hits)",
+					$uid,
+					(int) ( $row['total_points'] ?? 0 ),
+					(int) ( $row['exact_hits'] ?? 0 ),
+					(int) ( $row['trend_hits'] ?? 0 ),
+					(int) ( $row['range_hits'] ?? 0 )
+				) );
+			}
 		}
 	}
 
-	/** Recalculate rank_position for all users. Call after batch scoring. */
-	public function recalculateRanks(): void {
+	public function recalculateRanks( ?int $regionId = null ): void {
 		global $wpdb;
 		$t = $this->table;
-		$wpdb->query( 'SET @r := 0' );
-		$wpdb->query( "UPDATE {$t} SET rank_position = (@r := @r + 1) ORDER BY total_points DESC, exact_hits DESC" );
+		if ( $regionId ) {
+			$wpdb->query( 'SET @r := 0' );
+			$wpdb->query( $wpdb->prepare(
+				"UPDATE {$t} SET rank_position = (@r := @r + 1)
+				 WHERE region_id = %d OR region_id IS NULL
+				 ORDER BY total_points DESC, exact_hits DESC",
+				$regionId
+			) );
+		} else {
+			$wpdb->query( 'SET @r := 0' );
+			$wpdb->query( "UPDATE {$t} SET rank_position = (@r := @r + 1) ORDER BY total_points DESC, exact_hits DESC" );
+		}
 	}
 }
 
@@ -314,7 +424,7 @@ class ScoringRuleRepository extends AbstractRepository {
 
 	/** @return array<string,int> */
 	public function getAllAsMap(): array {
-		$rows = $this->findBy( [], 'rule_key' );
+		$rows = $this->findBy( [ 'is_active' => 1 ], 'rule_key' );
 		$map  = [];
 		foreach ( $rows as $row ) {
 			$map[ $row['rule_key'] ] = (int) $row['points'];
@@ -323,7 +433,7 @@ class ScoringRuleRepository extends AbstractRepository {
 	}
 }
 
-// ── Mini Leagues ──────────────────────────────────────────────────────────────
+// ── Mini Leagues (adapted for real estate) ──────────────────────────────────
 
 class MiniLeagueRepository extends AbstractRepository {
 	protected function getTableName(): string { return 'wc26_mini_leagues'; }
@@ -334,6 +444,11 @@ class MiniLeagueRepository extends AbstractRepository {
 		);
 		$row = $this->wpdb->get_row( $sql, ARRAY_A );
 		return $row ?: null;
+	}
+
+	/** @return array<int,array<string,mixed>> */
+	public function findByRegion( int $regionId ): array {
+		return $this->findBy( [ 'region_id' => $regionId ], 'name' );
 	}
 }
 
@@ -347,7 +462,7 @@ class MiniLeagueMemberRepository extends AbstractRepository {
 		$l = $wpdb->prefix . 'wc26_leaderboards';
 		$u = $wpdb->users;
 		$sql = $wpdb->prepare(
-			"SELECT u.display_name, lb.total_points, lb.exact_hits, lb.rank_position
+			"SELECT u.display_name, lb.total_points, lb.exact_hits, lb.trend_hits, lb.range_hits, lb.rank_position
 			 FROM {$m} ml
 			 JOIN {$u} u ON u.ID = ml.user_id
 			 LEFT JOIN {$l} lb ON lb.user_id = ml.user_id
@@ -375,6 +490,11 @@ class UserBadgeRepository extends AbstractRepository {
 		);
 		return (bool) $this->wpdb->get_var( $sql );
 	}
+
+	/** @return array<int,array<string,mixed>> */
+	public function getUserBadges( int $userId ): array {
+		return $this->findBy( [ 'user_id' => $userId ], 'earned_at', 'DESC' );
+	}
 }
 
 // ── Notifications ─────────────────────────────────────────────────────────────
@@ -399,5 +519,56 @@ class NotificationRepository extends AbstractRepository {
 			[ 'is_read' => 1 ],
 			[ 'user_id' => $userId ]
 		);
+	}
+}
+
+// ── Chainlink CRE Reports (NEW) ─────────────────────────────────────────────
+
+class ChainlinkReportRepository extends AbstractRepository {
+	protected function getTableName(): string { return 'wc26_chainlink_reports'; }
+
+	public function create( int $marketId, string $donId, array $reportData, ?string $signature = null ): int {
+		return $this->insert( [
+			'market_id'   => $marketId,
+			'don_id'      => $donId,
+			'report_data' => wp_json_encode( $reportData ),
+			'signature'   => $signature,
+			'status'      => 'pending',
+		] );
+	}
+
+	public function updateStatus( int $reportId, string $status, ?string $txHash = null, ?string $error = null ): void {
+		$data = [ 'status' => $status ];
+		if ( $txHash ) {
+			$data['transaction_hash'] = $txHash;
+			$data['submitted_at'] = current_time( 'mysql' );
+		}
+		if ( $error ) {
+			$data['error_message'] = $error;
+		}
+		if ( $status === 'confirmed' ) {
+			$data['confirmed_at'] = current_time( 'mysql' );
+		}
+		$this->update( $data, [ 'id' => $reportId ] );
+	}
+
+	/** @return array<int,array<string,mixed>> */
+	public function findPending(): array {
+		return $this->findBy( [ 'status' => 'pending' ], 'created_at' );
+	}
+
+	/** @return array<int,array<string,mixed>> */
+	public function findByMarket( int $marketId ): array {
+		return $this->findBy( [ 'market_id' => $marketId ], 'created_at', 'DESC' );
+	}
+
+	/** @return array<string,mixed>|null */
+	public function getLatestForMarket( int $marketId ): ?array {
+		$sql = $this->wpdb->prepare(
+			"SELECT * FROM {$this->table} WHERE market_id = %d ORDER BY created_at DESC LIMIT 1",
+			$marketId
+		);
+		$row = $this->wpdb->get_row( $sql, ARRAY_A );
+		return $row ?: null;
 	}
 }
