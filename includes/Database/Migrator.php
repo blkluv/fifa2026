@@ -22,19 +22,19 @@ class Migrator {
 		$charset = $wpdb->get_charset_collate();
 
 		$migrations = [
-			self::regionsTable( $charset ),        // replaces groups
-			self::propertiesTable( $charset ),     // replaces teams
-			self::marketsTable( $charset ),        // replaces matches
-			self::predictionsTable( $charset ),    // adapted for real estate
-			self::standingsTable( $charset ),      // adapted for real estate
-			self::leaderboardsTable( $charset ),   // adapted for real estate
-			self::scoringRulesTable( $charset ),   // adapted for real estate
-			self::miniLeaguesTable( $charset ),    // adapted for real estate
+			self::regionsTable( $charset ),
+			self::propertiesTable( $charset ),
+			self::marketsTable( $charset ),
+			self::predictionsTable( $charset ),
+			self::standingsTable( $charset ),
+			self::leaderboardsTable( $charset ),
+			self::scoringRulesTable( $charset ),
+			self::miniLeaguesTable( $charset ),
 			self::miniLeagueMembersTable( $charset ),
-			self::badgesTable( $charset ),         // adapted for real estate
+			self::badgesTable( $charset ),
 			self::userBadgesTable( $charset ),
 			self::notificationsTable( $charset ),
-			self::chainlinkReportsTable( $charset ), // NEW for CRE
+			self::chainlinkReportsTable( $charset ),
 		];
 
 		foreach ( $migrations as $sql ) {
@@ -46,10 +46,6 @@ class Migrator {
 
 	// ── Table DDL ────────────────────────────────────────────────────────────
 
-	/**
-	 * Regions table (replaces groups)
-	 * Geographic regions for real estate markets (e.g., "Austin Metro", "Miami Beach")
-	 */
 	private static function regionsTable( string $charset ): string {
 		global $wpdb;
 		$t = $wpdb->prefix . 'wc26_regions';
@@ -68,10 +64,6 @@ class Migrator {
 		) {$charset};";
 	}
 
-	/**
-	 * Properties table (replaces teams)
-	 * Real estate properties with pricing and location data
-	 */
 	private static function propertiesTable( string $charset ): string {
 		global $wpdb;
 		$t = $wpdb->prefix . 'wc26_properties';
@@ -99,10 +91,6 @@ class Migrator {
 		) {$charset};";
 	}
 
-	/**
-	 * Markets table (replaces matches)
-	 * Forecast periods for real estate price predictions
-	 */
 	private static function marketsTable( string $charset ): string {
 		global $wpdb;
 		$t = $wpdb->prefix . 'wc26_markets';
@@ -129,10 +117,6 @@ class Migrator {
 		) {$charset};";
 	}
 
-	/**
-	 * Predictions table (adapted for real estate)
-	 * User predictions for real estate markets
-	 */
 	private static function predictionsTable( string $charset ): string {
 		global $wpdb;
 		$t = $wpdb->prefix . 'wc26_predictions';
@@ -158,10 +142,6 @@ class Migrator {
 		) {$charset};";
 	}
 
-	/**
-	 * Standings table (adapted for real estate)
-	 * Region-based standings for users
-	 */
 	private static function standingsTable( string $charset ): string {
 		global $wpdb;
 		$t = $wpdb->prefix . 'wc26_standings';
@@ -183,10 +163,6 @@ class Migrator {
 		) {$charset};";
 	}
 
-	/**
-	 * Leaderboards table (adapted for real estate)
-	 * Global and region-based leaderboards
-	 */
 	private static function leaderboardsTable( string $charset ): string {
 		global $wpdb;
 		$t = $wpdb->prefix . 'wc26_leaderboards';
@@ -209,10 +185,6 @@ class Migrator {
 		) {$charset};";
 	}
 
-	/**
-	 * Scoring Rules table (adapted for real estate)
-	 * Dynamic point values for real estate predictions
-	 */
 	private static function scoringRulesTable( string $charset ): string {
 		global $wpdb;
 		$t = $wpdb->prefix . 'wc26_scoring_rules';
@@ -228,10 +200,6 @@ class Migrator {
 		) {$charset};";
 	}
 
-	/**
-	 * Mini Leagues table (adapted for real estate)
-	 * Private prediction leagues
-	 */
 	private static function miniLeaguesTable( string $charset ): string {
 		global $wpdb;
 		$t = $wpdb->prefix . 'wc26_mini_leagues';
@@ -253,9 +221,6 @@ class Migrator {
 		) {$charset};";
 	}
 
-	/**
-	 * Mini League Members table
-	 */
 	private static function miniLeagueMembersTable( string $charset ): string {
 		global $wpdb;
 		$t = $wpdb->prefix . 'wc26_mini_league_members';
@@ -271,9 +236,6 @@ class Migrator {
 		) {$charset};";
 	}
 
-	/**
-	 * Badges table (adapted for real estate)
-	 */
 	private static function badgesTable( string $charset ): string {
 		global $wpdb;
 		$t = $wpdb->prefix . 'wc26_badges';
@@ -290,9 +252,6 @@ class Migrator {
 		) {$charset};";
 	}
 
-	/**
-	 * User Badges table
-	 */
 	private static function userBadgesTable( string $charset ): string {
 		global $wpdb;
 		$t = $wpdb->prefix . 'wc26_user_badges';
@@ -307,9 +266,6 @@ class Migrator {
 		) {$charset};";
 	}
 
-	/**
-	 * Notifications table
-	 */
 	private static function notificationsTable( string $charset ): string {
 		global $wpdb;
 		$t = $wpdb->prefix . 'wc26_notifications';
@@ -328,10 +284,6 @@ class Migrator {
 		) {$charset};";
 	}
 
-	/**
-	 * Chainlink CRE Reports table (NEW)
-	 * Stores DON reports, signatures, and settlement data
-	 */
 	private static function chainlinkReportsTable( string $charset ): string {
 		global $wpdb;
 		$t = $wpdb->prefix . 'wc26_chainlink_reports';
