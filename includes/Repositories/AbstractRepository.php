@@ -1,6 +1,6 @@
 <?php
 /**
- * Abstract base repository providing generic CRUD helpers.
+ * Abstract Repository - base class for all repositories.
  *
  * @package WC26Predictor\Repositories
  */
@@ -23,102 +23,85 @@ abstract class AbstractRepository {
 	abstract protected function getTableName(): string;
 
 	/**
-	 * Find a single row by primary key.
-	 *
-	 * @return array<string,mixed>|null
+	 * Find a record by ID.
 	 */
 	public function find( int $id ): ?array {
-		$row = $this->wpdb->get_row(
-			$this->wpdb->prepare( "SELECT * FROM {$this->table} WHERE id = %d LIMIT 1", $id ),
-			ARRAY_A
+		$sql = $this->wpdb->prepare(
+			"SELECT * FROM {$this->table} WHERE id = %d LIMIT 1",
+			$id
 		);
+		$row = $this->wpdb->get_row( $sql, ARRAY_A );
 		return $row ?: null;
 	}
 
 	/**
-	 * Find all rows matching simple key=value conditions.
+	 * Find records by conditions.
 	 *
-	 * @param  array<string,mixed> $conditions
+	 * @param array<string,mixed> $where
+	 * @param string              $order_by
+	 * @param string              $order_dir
+	 *
 	 * @return array<int,array<string,mixed>>
 	 */
-	public function findBy( array $conditions = [], string $orderBy = 'id', string $direction = 'ASC', int $limit = 0 ): array {
-		$sql    = "SELECT * FROM {$this->table}";
-		$values = [];
-
-		if ( ! empty( $conditions ) ) {
-			$clauses = [];
-			foreach ( $conditions as $col => $val ) {
-				$clauses[] = "`{$col}` = %s";
-				$values[]  = $val;
-			}
-			$sql .= ' WHERE ' . implode( ' AND ', $clauses );
+	public function findBy( array $where, string $order_by = 'id', string $order_dir = 'ASC' ): array {
+		$conditions = [];
+		foreach ( $where as $key => $value ) {
+			$conditions[] = $this->wpdb->prepare( "`{$key}` = %s", $value );
 		}
-
-		$sql .= " ORDER BY `{$orderBy}` {$direction}";
-
-		if ( $limit > 0 ) {
-			$sql    .= ' LIMIT %d';
-			$values[] = $limit;
-		}
-
-		if ( ! empty( $values ) ) {
-			$sql = $this->wpdb->prepare( $sql, ...$values ); // phpcs:ignore
-		}
-
+		$where_sql = ! empty( $conditions ) ? 'WHERE ' . implode( ' AND ', $conditions ) : '';
+		$sql       = "SELECT * FROM {$this->table} {$where_sql} ORDER BY `{$order_by}` {$order_dir}";
 		return $this->wpdb->get_results( $sql, ARRAY_A ) ?: [];
 	}
 
 	/**
-	 * Insert a row. Returns the new ID or throws.
+	 * Find all records.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function findAll(): array {
+		$sql = "SELECT * FROM {$this->table}";
+		return $this->wpdb->get_results( $sql, ARRAY_A ) ?: [];
+	}
+
+	/**
+	 * Insert a new record.
 	 *
 	 * @param array<string,mixed> $data
+	 *
+	 * @return int Insert ID.
 	 */
 	public function insert( array $data ): int {
-		$result = $this->wpdb->insert( $this->table, $data );
-
-		if ( false === $result ) {
-			throw new \RuntimeException( "DB insert failed: {$this->wpdb->last_error}" );
-		}
-
+		$this->wpdb->insert( $this->table, $data );
 		return (int) $this->wpdb->insert_id;
 	}
 
 	/**
-	 * Update rows matching $where with $data. Returns rows affected.
+	 * Update records.
 	 *
 	 * @param array<string,mixed> $data
 	 * @param array<string,mixed> $where
+	 *
+	 * @return int Number of rows affected.
 	 */
 	public function update( array $data, array $where ): int {
-		$result = $this->wpdb->update( $this->table, $data, $where );
-		return (int) $result;
+		return (int) $this->wpdb->update( $this->table, $data, $where );
 	}
 
 	/**
-	 * Delete rows matching $where. Returns rows affected.
+	 * Delete records.
 	 *
 	 * @param array<string,mixed> $where
+	 *
+	 * @return int Number of rows affected.
 	 */
 	public function delete( array $where ): int {
-		$result = $this->wpdb->delete( $this->table, $where );
-		return (int) $result;
+		return (int) $this->wpdb->delete( $this->table, $where );
 	}
 
-	/** Count all rows (optionally filtered). */
-	public function count( array $conditions = [] ): int {
-		$sql    = "SELECT COUNT(*) FROM {$this->table}";
-		$values = [];
-
-		if ( ! empty( $conditions ) ) {
-			$clauses = [];
-			foreach ( $conditions as $col => $val ) {
-				$clauses[] = "`{$col}` = %s";
-				$values[]  = $val;
-			}
-			$sql .= ' WHERE ' . implode( ' AND ', $clauses );
-			$sql  = $this->wpdb->prepare( $sql, ...$values ); // phpcs:ignore
-		}
-
-		return (int) $this->wpdb->get_var( $sql );
+	/**
+	 * Get table name with prefix.
+	 */
+	public function getTable(): string {
+		return $this->table;
 	}
 }
