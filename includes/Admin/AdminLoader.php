@@ -26,9 +26,9 @@ class AdminLoader {
 		add_action( 'admin_init',            [ $this, 'registerSettings' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueueAssets' ] );
 		add_action( 'wp_ajax_wc26_import_csv',     [ new CsvImportHandler( $this->plugin ), 'handle' ] );
-		add_action( 'wp_ajax_wc26_seed_sample_teams', [ new SampleDataHandler( $this->plugin ), 'seedMarkets' ] );
-		add_action( 'wp_ajax_wc26_reset_import_openfootball_2026', [ new OfficialDataImportHandler( $this->plugin ), 'resetAndImport' ] );
-		add_action( 'wp_ajax_wc26_localize_teams_fa', [ new LocalizeMarketsHandler( $this->plugin ), 'handle' ] );
+		add_action( 'wp_ajax_wc26_seed_sample_markets', [ new SampleDataHandler( $this->plugin ), 'seedMarkets' ] );
+		add_action( 'wp_ajax_wc26_reset_import_realestate', [ new OfficialDataImportHandler( $this->plugin ), 'resetAndImport' ] );
+		add_action( 'wp_ajax_wc26_update_market_data', [ new LocalizeMarketsHandler( $this->plugin ), 'handle' ] );
 		add_action( 'wp_ajax_wc26_save_market',     [ new MarketAdminHandler( $this->plugin ), 'save' ] );
 		add_action( 'wp_ajax_wc26_submit_result',  [ new MarketAdminHandler( $this->plugin ), 'submitResult' ] );
 		
@@ -40,8 +40,6 @@ class AdminLoader {
 	 * Chainlink CRE Integration: Trigger DON report on market settlement
 	 */
 	public function triggerChainlinkReport( int $market_id, string $outcome, float $confidence ): void {
-		// This hook would be consumed by a separate Chainlink CRE workflow
-		// The workflow would read the market data and submit a DON-signed report
 		do_action( 'wc26_chainlink_report_requested', $market_id, $outcome, $confidence );
 	}
 
@@ -58,7 +56,6 @@ class AdminLoader {
 			'default'           => '',
 		] );
 
-		// Real Estate specific settings
 		register_setting( 'wc26_settings', 'wc26_market_data_api', [
 			'type'              => 'string',
 			'sanitize_callback' => 'esc_url_raw',
@@ -152,7 +149,6 @@ class AdminLoader {
 		$tR = $wpdb->prefix . 'wc26_regions';
 		$u  = $wpdb->users;
 
-		// Leaderboard direct from predictions (source of truth)
 		$rows = $wpdb->get_results(
 			"SELECT
 				u.ID                                                                        AS user_id,
@@ -172,7 +168,6 @@ class AdminLoader {
 			ARRAY_A
 		) ?: [];
 
-		// Market-by-market prediction detail (last 30 settled markets)
 		$marketDetail = $wpdb->get_results(
 			"SELECT
 				m.id                AS market_id,
@@ -241,7 +236,6 @@ class AdminLoader {
 
 /**
  * MarketAdminHandler — AJAX handler for admin market management.
- * Adapted for Real Estate Markets
  */
 class MarketAdminHandler {
 
@@ -260,11 +254,10 @@ class MarketAdminHandler {
 
 		$data = [
 			'region_id'        => (int) ( $_POST['region_id'] ?? 0 ),
-			'property_type'    => sanitize_text_field( $_POST['property_type'] ?? '' ),
+			'property_id'      => (int) ( $_POST['property_id'] ?? 0 ),
 			'forecast_date'    => sanitize_text_field( $_POST['forecast_date'] ?? '' ),
 			'initial_price'    => (float) ( $_POST['initial_price'] ?? 0 ),
 			'market_trend'     => sanitize_key( $_POST['market_trend'] ?? 'stable' ),
-			'region_id'        => (int) ( $_POST['region_id'] ?? 0 ) ?: null,
 		];
 
 		/** @var \WC26Predictor\Services\MarketService $svc */
@@ -296,7 +289,6 @@ class MarketAdminHandler {
 				sanitize_key( $_POST['market_trend'] ?? 'stable' )
 			);
 			
-			// Trigger Chainlink CRE hook for DON reporting
 			do_action( 'wc26_market_settled', (int) $_POST['market_id'], $result['outcome'], $result['confidence'] );
 			
 			wp_send_json_success( $result );
@@ -309,8 +301,7 @@ class MarketAdminHandler {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * CsvImportHandler — handles CSV bulk imports for markets, properties, regions.
- * Adapted for Real Estate
+ * CsvImportHandler — handles CSV bulk imports.
  */
 class CsvImportHandler {
 
@@ -341,8 +332,8 @@ class CsvImportHandler {
 			wp_send_json_error( __( 'Could not open file.', 'wc26-predictor' ) );
 		}
 
-		$headers = fgetcsv( $handle );
-		$count   = 0;
+		fgetcsv( $handle );
+		$count = 0;
 
 		/** @var \WC26Predictor\Services\ImportService $importService */
 		$importService = $this->plugin->make( 'import_service' );
@@ -381,22 +372,21 @@ class SampleDataHandler {
 
 		$path = WC26_PLUGIN_DIR . 'migrations/sample-markets.csv';
 		if ( ! file_exists( $path ) ) {
-			wp_send_json_error( __( 'Sample markets file not found.', 'wc26-predictor' ), 404 );
+			wp_send_json_error( __( 'Sample file not found.', 'wc26-predictor' ), 404 );
 		}
 
 		$handle = fopen( $path, 'r' );
 		if ( ! $handle ) {
-			wp_send_json_error( __( 'Could not open sample file.', 'wc26-predictor' ) );
+			wp_send_json_error( __( 'Could not open file.', 'wc26-predictor' ) );
 		}
 
 		fgetcsv( $handle );
 
 		/** @var \WC26Predictor\Services\ImportService $importService */
 		$importService = $this->plugin->make( 'import_service' );
-		$count         = $importService->importMarkets( $handle );
+		$count = $importService->importMarkets( $handle );
 
 		fclose( $handle );
-
 		wp_send_json_success( [ 'imported' => $count ] );
 	}
 }
@@ -422,11 +412,10 @@ class OfficialDataImportHandler {
 		try {
 			$importService->resetAllData();
 			$stats = $importService->importRealEstateDataFromAPI();
+			wp_send_json_success( $stats );
 		} catch ( \Throwable $e ) {
 			wp_send_json_error( $e->getMessage() );
 		}
-
-		wp_send_json_success( $stats );
 	}
 }
 
@@ -447,7 +436,7 @@ class LocalizeMarketsHandler {
 
 		/** @var \WC26Predictor\Services\ImportService $importService */
 		$importService = $this->plugin->make( 'import_service' );
-		$count         = $importService->updateMarketDataFromAPI();
+		$count = $importService->updateMarketDataFromAPI();
 
 		wp_send_json_success( [ 'updated' => $count ] );
 	}
