@@ -1,6 +1,6 @@
 <?php
 /**
- * ScoringService — flexible point engine driven by scoring_rules table.
+ * Scoring Service - calculates points for real estate predictions
  *
  * @package WC26Predictor\Services
  */
@@ -13,173 +13,116 @@ use WC26Predictor\Repositories\ScoringRuleRepository;
 
 class ScoringService {
 
-	private ScoringRuleRepository $repo;
-
-	/** @var array<string,int>|null Cached rule map */
-	private ?array $rules = null;
+	private ScoringRuleRepository $ruleRepo;
 
 	public function __construct() {
-		$this->repo = new ScoringRuleRepository();
+		$this->ruleRepo = new ScoringRuleRepository();
 	}
 
 	/**
-	 * Calculate points for a single prediction against the real result.
-	 *
-	 * Returns an array with 'points' (int) and 'type' (string).
-	 *
-	 * @return array{points: int, type: string}
+	 * Calculate points for a prediction
 	 */
-	public function calculate(
-		int $predHome,
-		int $predAway,
-		int $realHome,
-		int $realAway,
-		bool $isJoker = false
-	): array {
-		$rules  = $this->getRules();
-		$points = 0;
-		$type   = 'miss';
+	public function calculatePoints( array $prediction, array $market ): int {
+		$rules = $this->ruleRepo->getAllAsMap();
 
-		if ( $predHome === $realHome && $predAway === $realAway ) {
-			// STATE 1 — Exact score
-			$points = (int) ( $rules['exact_score'] ?? 0 );
-			$type   = 'exact';
-
-		} elseif ( $realHome === $realAway ) {
-			// Real match is a draw
-			if ( $predHome === $predAway ) {
-				// Predicted a draw (correct winner/draw, wrong score)
-				$points = (int) ( $rules['correct_draw'] ?? 0 );
-				$type   = 'draw';
-			} else {
-				// Not a draw prediction. Still award "one team correct" if applicable.
-				if ( $predHome === $realHome || $predAway === $realAway ) {
-					$points = (int) ( $rules['one_team_correct'] ?? 0 );
-					$type   = 'one_team';
-				}
+		// Exact price match (within 1%)
+		if ( isset( $prediction['predicted_price'] ) && $prediction['predicted_price'] > 0 ) {
+			$priceDiff = abs( $prediction['predicted_price'] - $market['final_price'] ) / $market['final_price'] * 100;
+			if ( $priceDiff <= 1 ) {
+				return ( $prediction['is_joker'] ? 2 : 1 ) * ( $rules['exact_price'] ?? 10 );
 			}
-		} else {
-			// Real match has a winner
-			$realDiff  = $realHome - $realAway;   // e.g. +2 means home won by 2
-			$predDiff  = $predHome - $predAway;
-
-			if ( $predDiff === $realDiff ) {
-				// STATE 2 — Goal difference correct (same margin, different score)
-				$points = (int) ( $rules['goal_difference'] ?? 0 );
-				$type   = 'goal_diff';
-			} elseif ( ( $predHome > $predAway ) === ( $realHome > $realAway ) ) {
-				// STATE 3 — Correct winner only
-				$points = (int) ( $rules['correct_winner'] ?? 0 );
-				$type   = 'winner';
-			} else {
-				if ( $predHome === $realHome || $predAway === $realAway ) {
-					$points = (int) ( $rules['one_team_correct'] ?? 0 );
-					$type   = 'one_team';
-				}
+			// Price range (within 5%)
+			if ( $priceDiff <= 5 ) {
+				return ( $prediction['is_joker'] ? 2 : 1 ) * ( $rules['price_range'] ?? 5 );
 			}
 		}
 
-		// Joker doubles earned points
-		if ( $isJoker && $points > 0 ) {
-			$points *= 2;
+		// Trend prediction
+		if ( isset( $prediction['predicted_trend'] ) ) {
+			$actualTrend = $this->determineTrend( $market['initial_price'], $market['final_price'] );
+			if ( $prediction['predicted_trend'] === $actualTrend ) {
+				return ( $prediction['is_joker'] ? 2 : 1 ) * ( $rules['correct_trend'] ?? 3 );
+			}
+			// Partial - opposite trend but not extreme
+			if ( $this->isPartialTrend( $prediction['predicted_trend'], $actualTrend ) ) {
+				return ( $prediction['is_joker'] ? 2 : 1 ) * ( $rules['partial_trend'] ?? 1 );
+			}
 		}
 
-		return [ 'points' => $points, 'type' => $type ];
+		return 0;
 	}
 
-	/** @return array<string,int> */
+	public function determineTrend( float $initialPrice, float $finalPrice ): string {
+		$changePct = ( ( $finalPrice - $initialPrice ) / $initialPrice ) * 100;
+		if ( $changePct > 3 ) return 'increase';
+		if ( $changePct < -3 ) return 'decrease';
+		return 'stable';
+	}
+
+	private function isPartialTrend( string $predicted, string $actual ): bool {
+		// If predicted increase but actual stable, or vice versa
+		if ( $predicted === 'increase' && $actual === 'stable' ) return true;
+		if ( $predicted === 'decrease' && $actual === 'stable' ) return true;
+		if ( $predicted === 'stable' && ( $actual === 'increase' || $actual === 'decrease' ) ) return true;
+		return false;
+	}
+
+	public function getPredictionType( array $prediction, array $market ): string {
+		if ( isset( $prediction['predicted_price'] ) && $prediction['predicted_price'] > 0 ) {
+			$priceDiff = abs( $prediction['predicted_price'] - $market['final_price'] ) / $market['final_price'] * 100;
+			if ( $priceDiff <= 1 ) return 'exact';
+			if ( $priceDiff <= 5 ) return 'range';
+		}
+		return 'trend';
+	}
+
+	/**
+	 * Get all scoring rules
+	 */
 	public function getRules(): array {
-		if ( null === $this->rules ) {
-			$cached = wp_cache_get( 'wc26_scoring_rules', 'wc26' );
-
-			if ( false === $cached ) {
-				$this->rules = $this->repo->getAllAsMap();
-				wp_cache_set( 'wc26_scoring_rules', $this->rules, 'wc26', HOUR_IN_SECONDS );
-			} else {
-				$this->rules = (array) $cached;
-			}
-		}
-
-		return $this->rules;
-	}
-
-	/** @return array<int,array<string,mixed>> */
-	public function getRulesRows(): array {
-		return $this->repo->findBy( [], 'id', 'ASC' );
+		return $this->ruleRepo->findAll();
 	}
 
 	/**
-	 * @param array<int,array<string,mixed>> $rows
-	 * @return array{updated:int, inserted:int}
+	 * Update scoring rules
 	 */
-	public function updateRulesRows( array $rows ): array {
-		$updated  = 0;
-		$inserted = 0;
-
-		foreach ( $rows as $row ) {
-			if ( ! is_array( $row ) ) {
-				continue;
-			}
-
-			$key = isset( $row['rule_key'] ) ? sanitize_key( (string) $row['rule_key'] ) : '';
-			if ( $key === '' ) {
-				continue;
-			}
-
-			$label = isset( $row['label'] ) ? sanitize_text_field( (string) $row['label'] ) : '';
-			$desc  = isset( $row['description'] ) ? sanitize_text_field( (string) $row['description'] ) : '';
-			$pts   = isset( $row['points'] ) ? (int) $row['points'] : 0;
-			$pts   = max( 0, min( 9999, $pts ) );
-
-			$existing = $this->repo->findBy( [ 'rule_key' => $key ], 'id', 'ASC', 1 );
-
-			if ( $existing ) {
-				$affected = $this->repo->update(
-					[
-						'label'       => $label,
-						'description' => $desc,
-						'points'      => $pts,
-					],
-					[ 'rule_key' => $key ]
+	public function updateRulesRows( array $rules ): array {
+		foreach ( $rules as $rule ) {
+			if ( isset( $rule['rule_key'] ) && isset( $rule['points'] ) ) {
+				$this->ruleRepo->update(
+					[ 'points' => (int) $rule['points'], 'label' => $rule['label'] ?? '' ],
+					[ 'rule_key' => $rule['rule_key'] ]
 				);
-				$updated += $affected > 0 ? 1 : 0;
-			} else {
-				$this->repo->insert(
-					[
-						'rule_key'    => $key,
-						'label'       => $label,
-						'description' => $desc,
-						'points'      => $pts,
-					]
-				);
-				$inserted++;
 			}
 		}
-
-		wp_cache_delete( 'wc26_scoring_rules', 'wc26' );
-		$this->rules = null;
-
-		return [ 'updated' => $updated, 'inserted' => $inserted ];
+		return [ 'updated' => count( $rules ) ];
 	}
 
-	/** Seed default scoring rules on activation. */
+	/**
+	 * Seed default scoring rules
+	 */
 	public static function seedDefaults(): void {
 		global $wpdb;
 		$t = $wpdb->prefix . 'wc26_scoring_rules';
 
-		$defaults = [
-			[ 'exact_score',      'نتیجه دقیق',     10, 'پیش‌بینی دقیق هر دو تیم' ],
-			[ 'goal_difference',  'تفاضل گل درست',   5, 'تفاضل گل درست با نتیجه متفاوت' ],
-			[ 'correct_winner',   'برد صحیح',        3, 'برنده بازی درست پیش‌بینی شده' ],
-			[ 'correct_draw',     'مساوی صحیح',      4, 'پیش‌بینی مساوی درست' ],
-			[ 'one_team_correct', 'گل یک تیم درست',  1, 'گل یکی از تیم‌ها درست است' ],
+		$rules = [
+			[ 'exact_price', 'Exact Price', 10, 'Predict the exact final price (within 1%)' ],
+			[ 'price_range', 'Price Range', 5, 'Predict the correct price range (within 5%)' ],
+			[ 'correct_trend', 'Correct Trend', 3, 'Predict the correct market trend' ],
+			[ 'partial_trend', 'Partial Trend', 1, 'Partial trend prediction' ],
 		];
 
-		foreach ( $defaults as [ $key, $label, $pts, $desc ] ) {
-			$wpdb->query( $wpdb->prepare(
-				"INSERT IGNORE INTO {$t} (rule_key, label, points, description) VALUES (%s, %s, %d, %s)",
-				$key, $label, $pts, $desc
-			) );
+		foreach ( $rules as $rule ) {
+			$wpdb->replace(
+				$t,
+				[
+					'rule_key'    => $rule[0],
+					'label'       => $rule[1],
+					'points'      => $rule[2],
+					'description' => $rule[3],
+				],
+				[ '%s', '%s', '%d', '%s' ]
+			);
 		}
 	}
 }
