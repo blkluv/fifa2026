@@ -13,7 +13,7 @@ namespace WC26Predictor;
 
 use WC26Predictor\Database\Migrator;
 use WC26Predictor\Services\{
-	MarketService,
+	MarketService,        
 	PredictionService,
 	ScoringService,
 	StandingsService,
@@ -22,7 +22,7 @@ use WC26Predictor\Services\{
 	BadgeService,
 	LeagueService,
 	ImportService,
-	ChainlinkService  // NEW
+	ChainlinkService      
 };
 use WC26Predictor\REST\Router;
 use WC26Predictor\Admin\AdminLoader;
