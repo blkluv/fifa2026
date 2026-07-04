@@ -1,4 +1,3 @@
-require_once WC26_PLUGIN_DIR . 'includes/Repositories/Repositories.php';
 <?php
 /**
  * Chainlink CRE Service - manages DON reports and settlement
@@ -9,6 +8,9 @@ require_once WC26_PLUGIN_DIR . 'includes/Repositories/Repositories.php';
 declare(strict_types=1);
 
 namespace WC26Predictor\Services;
+
+// Load the repositories file that contains ChainlinkReportRepository
+require_once WC26_PLUGIN_DIR . 'includes/Repositories/Repositories.php';
 
 use WC26Predictor\Repositories\ChainlinkReportRepository;
 
