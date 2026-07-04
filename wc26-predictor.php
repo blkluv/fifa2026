@@ -1,47 +1,43 @@
 <?php
 /**
- * Plugin Name:       پیش‌بینی مسابقات جام جهانی 2026
- * Plugin URI:        https://github.com/updesire
- * Description:       سیستم اختصاصی شرکت کادک جهت پیش‌بینی مسابقات جام جهانی 2026
- * Version:           2.5.0
- * Requires at least: 6.4
- * Requires PHP:      8.1
- * Author:            سوران
- * Author URI:        https://soraun.com
- * License:           GPL v2 or later
- * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       wc26-predictor
- * Domain Path:       /languages
+ * Plugin Name: CRE Predictor
+ * Plugin URI:  https://cremarket.io
+ * Description: A production-grade, scalable CRE prediction platform built as a WordPress plugin. Designed for large traffic, REST-API-first, and extensible to Telegram Mini App, PWA, and mobile apps.
+ * Version:     1.0.0
+ * Author:      Hahz Terry
+ * Author URI:  https://cremarket.io
+ * Text Domain: cre-predictor
+ * Domain Path: /languages
+ * License:     GPL-2.0-or-later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  *
  * @package WC26Predictor
  */
 
 declare(strict_types=1);
 
-namespace WC26Predictor;
-
-// Prevent direct access
+// Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// Plugin constants
-define( 'WC26_VERSION', '2.5.0' );
+// Plugin constants.
+define( 'WC26_VERSION', '1.0.0' );
+define( 'WC26_DB_VERSION', '2.0.0' );
 define( 'WC26_PLUGIN_FILE', __FILE__ );
+define( 'WC26_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 define( 'WC26_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WC26_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'WC26_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
-define( 'WC26_DB_VERSION', '1.1.1' );
 
-// Autoloader
+// Load autoloader.
 require_once WC26_PLUGIN_DIR . 'includes/Autoloader.php';
-Autoloader::register();
 
-// Activation / Deactivation hooks
-register_activation_hook( __FILE__, [ Plugin::class, 'activate' ] );
-register_deactivation_hook( __FILE__, [ Plugin::class, 'deactivate' ] );
+// Register activation/deactivation hooks.
+register_activation_hook( __FILE__, [ 'WC26Predictor\\Plugin', 'activate' ] );
+register_deactivation_hook( __FILE__, [ 'WC26Predictor\\Plugin', 'deactivate' ] );
 
-// Boot the plugin
+// Boot the plugin.
 add_action( 'plugins_loaded', function () {
-	Plugin::getInstance()->boot();
+	$plugin = WC26Predictor\Plugin::getInstance();
+	$plugin->boot();
 } );
