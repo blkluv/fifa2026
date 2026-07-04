@@ -2,6 +2,8 @@
 /**
  * Main Plugin bootstrap class.
  *
+ * Adapted for Real Estate Prediction Market with Chainlink CRE Integration
+ *
  * @package WC26Predictor
  */
 
@@ -11,7 +13,7 @@ namespace WC26Predictor;
 
 use WC26Predictor\Database\Migrator;
 use WC26Predictor\Services\{
-	MatchService,
+	MarketService,
 	PredictionService,
 	ScoringService,
 	StandingsService,
@@ -19,7 +21,8 @@ use WC26Predictor\Services\{
 	NotificationService,
 	BadgeService,
 	LeagueService,
-	ImportService
+	ImportService,
+	ChainlinkService  // NEW
 };
 use WC26Predictor\REST\Router;
 use WC26Predictor\Admin\AdminLoader;
@@ -57,16 +60,6 @@ final class Plugin {
 			static::activate();
 		}
 
-		if ( ! get_option( 'wc26_teams_localized_fa' ) ) {
-			try {
-				/** @var \WC26Predictor\Services\ImportService $svc */
-				$svc = $this->make( 'import_service' );
-				$svc->updateTeamNamesFa();
-				update_option( 'wc26_teams_localized_fa', 1 );
-			} catch ( \Throwable $e ) {
-			}
-		}
-
 		$this->registerHooks();
 	}
 
@@ -80,15 +73,16 @@ final class Plugin {
 
 	private function registerServices(): void {
 		// Core services — lazy singletons via closures
-		$this->bind( 'match_service',        fn() => new MatchService() );
-		$this->bind( 'prediction_service',   fn() => new PredictionService( $this->make( 'scoring_service' ) ) );
-		$this->bind( 'scoring_service',      fn() => new ScoringService() );
-		$this->bind( 'standings_service',    fn() => new StandingsService() );
-		$this->bind( 'leaderboard_service',  fn() => new LeaderboardService() );
-		$this->bind( 'notification_service', fn() => new NotificationService() );
-		$this->bind( 'badge_service',        fn() => new BadgeService() );
-		$this->bind( 'league_service',       fn() => new LeagueService() );
-		$this->bind( 'import_service',       fn() => new ImportService() );
+		$this->bind( 'market_service',        fn() => new MarketService() );
+		$this->bind( 'prediction_service',    fn() => new PredictionService( $this->make( 'scoring_service' ) ) );
+		$this->bind( 'scoring_service',       fn() => new ScoringService() );
+		$this->bind( 'standings_service',     fn() => new StandingsService() );
+		$this->bind( 'leaderboard_service',   fn() => new LeaderboardService() );
+		$this->bind( 'notification_service',  fn() => new NotificationService() );
+		$this->bind( 'badge_service',         fn() => new BadgeService() );
+		$this->bind( 'league_service',        fn() => new LeagueService() );
+		$this->bind( 'import_service',        fn() => new ImportService() );
+		$this->bind( 'chainlink_service',     fn() => new ChainlinkService() ); // NEW
 	}
 
 	private function registerHooks(): void {
@@ -113,6 +107,9 @@ final class Plugin {
 
 		// Event bus
 		( new EventManager( $this ) )->init();
+
+		// Chainlink CRE event hooks
+		add_action( 'wc26_market_settled', [ $this->make( 'chainlink_service' ), 'onMarketSettled' ], 10, 3 );
 	}
 
 	// ── DI Container ────────────────────────────────────────────────────────
