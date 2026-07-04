@@ -1,158 +1,158 @@
 <?php
 /**
- * BadgeService — award badges based on leaderboard milestones.
+ * Badge Service - awards badges based on user achievements
  *
  * @package WC26Predictor\Services
  */
- 
+
 declare(strict_types=1);
- 
+
 namespace WC26Predictor\Services;
- 
+
 use WC26Predictor\Repositories\BadgeRepository;
-use WC26Predictor\Repositories\LeaderboardRepository;
 use WC26Predictor\Repositories\UserBadgeRepository;
- 
+use WC26Predictor\Repositories\PredictionRepository;
+
 class BadgeService {
- 
-	private BadgeRepository $badges;
-	private UserBadgeRepository $userBadges;
-	private LeaderboardRepository $lb;
-	private NotificationService $notifs;
- 
+
+	private BadgeRepository $badgeRepo;
+	private UserBadgeRepository $userBadgeRepo;
+	private PredictionRepository $predictionRepo;
+
 	public function __construct() {
-		$this->badges     = new BadgeRepository();
-		$this->userBadges = new UserBadgeRepository();
-		$this->lb         = new LeaderboardRepository();
-		$this->notifs     = new NotificationService();
-	}
- 
-	public function evaluate( int $userId ): void {
-		$row = $this->lb->findBy( [ 'user_id' => $userId ] );
-		if ( ! $row ) {
-			return;
-		}
- 
-		$stats = $row[0];
- 
-		$criteria = [
-			'exact_hits'     => (int) $stats['exact_hits'],
-			'goal_diff_hits' => (int) $stats['goal_diff_hits'],
-			'winner_hits'    => (int) $stats['winner_hits'],
-			'total_points'   => (int) $stats['total_points'],
-		];
- 
-		$allBadges = $this->badges->findBy( [], 'id' );
- 
-		foreach ( $allBadges as $badge ) {
-			$badgeId = (int) $badge['id'];
- 
-			if ( $this->userBadges->userHasBadge( $userId, $badgeId ) ) {
-				continue;
-			}
- 
-			$criterion = (string) $badge['criteria'];
-			$threshold = (int) $badge['threshold'];
- 
-			if ( isset( $criteria[ $criterion ] ) && $criteria[ $criterion ] >= $threshold ) {
-				$this->award( $userId, $badgeId, (string) $badge['name'] );
-			}
-		}
+		$this->badgeRepo = new BadgeRepository();
+		$this->userBadgeRepo = new UserBadgeRepository();
+		$this->predictionRepo = new PredictionRepository();
 	}
 
-	/** @return array<int,array<string,mixed>> */
-	public function getUserBadgesWithProgress( int $userId ): array {
-		global $wpdb;
-		$tP = $wpdb->prefix . 'wc26_predictions';
-		$tM = $wpdb->prefix . 'wc26_matches';
-
-		// Compute from predictions — never stale.
-		$hitStats = $wpdb->get_row( $wpdb->prepare(
-			"SELECT
-				COALESCE(SUM(p.earned_points), 0)                                         AS total_points,
-				SUM(CASE WHEN p.prediction_type = 'exact'           THEN 1 ELSE 0 END)    AS exact_hits,
-				SUM(CASE WHEN p.prediction_type = 'goal_diff'       THEN 1 ELSE 0 END)    AS goal_diff_hits,
-				SUM(CASE WHEN p.prediction_type IN ('winner','draw') THEN 1 ELSE 0 END)   AS winner_hits
-			 FROM {$tP} p
-			 JOIN {$tM} m ON m.id = p.match_id
-			 WHERE p.user_id = %d AND m.status = 'finished'",
-			$userId
-		), ARRAY_A );
-
-		$criteria = [
-			'exact_hits'     => (int) ( $hitStats['exact_hits']    ?? 0 ),
-			'goal_diff_hits' => (int) ( $hitStats['goal_diff_hits'] ?? 0 ),
-			'winner_hits'    => (int) ( $hitStats['winner_hits']   ?? 0 ),
-			'total_points'   => (int) ( $hitStats['total_points']  ?? 0 ),
-		];
-
-		$allBadges = $this->badges->findBy( [], 'id' );
-		$userOwned = $this->userBadges->findBy( [ 'user_id' => $userId ], 'badge_id' );
-		$ownedSet  = [];
-		foreach ( $userOwned as $ub ) {
-			$ownedSet[ (int) $ub['badge_id'] ] = true;
-		}
-
-		$out = [];
-		foreach ( $allBadges as $badge ) {
-			$badgeId  = (int) $badge['id'];
-			$crit     = (string) ( $badge['criteria'] ?? '' );
-			$threshold = (int) ( $badge['threshold'] ?? 1 );
-			$threshold = max( 1, $threshold );
-			$current  = isset( $criteria[ $crit ] ) ? (int) $criteria[ $crit ] : 0;
-			$earned   = isset( $ownedSet[ $badgeId ] );
-			$progress = (int) min( 100, round( 100 * ( $current / $threshold ) ) );
-
-			$out[] = [
-				'id'           => $badgeId,
-				'slug'         => (string) ( $badge['slug'] ?? '' ),
-				'name'         => (string) ( $badge['name'] ?? '' ),
-				'description'  => (string) ( $badge['description'] ?? '' ),
-				'icon_url'     => (string) ( $badge['icon_url'] ?? '' ),
-				'criteria'     => $crit,
-				'threshold'    => $threshold,
-				'current'      => $current,
-				'earned'       => $earned,
-				'progress_pct' => $earned ? 100 : $progress,
-			];
-		}
-
-		return $out;
-	}
- 
-	private function award( int $userId, int $badgeId, string $badgeName ): void {
-		$this->userBadges->insert( [
-			'user_id'  => $userId,
-			'badge_id' => $badgeId,
-		] );
- 
-		$this->notifs->send(
-			$userId,
-			'badge_earned',
-			sprintf( __( 'نشان جدید دریافت شد: %s', 'wc26-predictor' ), $badgeName ),
-			__( 'تبریک! یک نشان جدید برای شما ثبت شد.', 'wc26-predictor' )
-		);
- 
-		do_action( 'wc26_badge_earned', $userId, $badgeId );
-	}
- 
+	/**
+	 * Seed default badges
+	 */
 	public static function seed(): void {
 		global $wpdb;
 		$t = $wpdb->prefix . 'wc26_badges';
- 
-		$defaults = [
-			[ 'exact-score-master',  'استاد نتیجه دقیق',     '۵ پیش‌بینی دقیق ثبت کنید',        'exact_hits',      5 ],
-			[ 'goal-diff-king',      'سلطان تفاضل گل',       '۱۰ پیش‌بینی تفاضل درست بزنید',   'goal_diff_hits', 10 ],
-			[ 'prediction-wizard',   'جادوگر پیش‌بینی',      '۱۰۰ امتیاز کل کسب کنید',          'total_points',  100 ],
-			[ 'champion-predictor',  'پیش‌بین قهرمان',       '۵۰۰ امتیاز کل کسب کنید',          'total_points',  500 ],
+
+		$badges = [
+			[ 'first-prediction', 'First Prediction', 'Made your first prediction', '🎯', 'predictions', 1 ],
+			[ 'perfect-predictor', 'Perfect Predictor', 'Achieved 10 exact price predictions', '🏆', 'exact_hits', 10 ],
+			[ 'trend-master', 'Trend Master', 'Predicted market trends correctly 20 times', '📈', 'trend_hits', 20 ],
+			[ 'real-estate-guru', 'Real Estate Guru', 'Achieved 100 correct predictions', '🏠', 'total_correct', 100 ],
+			[ 'chainlink-pioneer', 'Chainlink Pioneer', 'Participated in Chainlink CRE settlement', '🔗', 'chainlink_reports', 1 ],
+			[ 'arbitrage-finder', 'Arbitrage Finder', 'Identified 10 cross-market arbitrage opportunities', '💡', 'arbitrage_hits', 10 ],
 		];
- 
-		foreach ( $defaults as [ $slug, $name, $desc, $crit, $thresh ] ) {
-			$wpdb->query( $wpdb->prepare(
-				"INSERT IGNORE INTO {$t} (slug, name, description, criteria, threshold)
-				 VALUES (%s, %s, %s, %s, %d)",
-				$slug, $name, $desc, $crit, $thresh
-			) );
+
+		foreach ( $badges as $badge ) {
+			$wpdb->replace(
+				$t,
+				[
+					'slug'        => $badge[0],
+					'name'        => $badge[1],
+					'description' => $badge[2],
+					'icon_url'    => $badge[3],
+					'criteria'    => $badge[4],
+					'threshold'   => $badge[5],
+				],
+				[ '%s', '%s', '%s', '%s', '%s', '%d' ]
+			);
 		}
+	}
+
+	/**
+	 * Check and award badges for a user
+	 */
+	public function checkAndAward( int $userId ): void {
+		$stats = $this->getUserStats( $userId );
+		$allBadges = $this->badgeRepo->findAll();
+
+		foreach ( $allBadges as $badge ) {
+			if ( $this->userBadgeRepo->userHasBadge( $userId, (int) $badge['id'] ) ) {
+				continue;
+			}
+
+			if ( $this->meetsCriteria( $stats, $badge ) ) {
+				$this->awardBadge( $userId, (int) $badge['id'] );
+			}
+		}
+	}
+
+	/**
+	 * Award a badge to a user
+	 */
+	public function awardBadge( int $userId, int $badgeId ): void {
+		if ( $this->userBadgeRepo->userHasBadge( $userId, $badgeId ) ) {
+			return;
+		}
+
+		$this->userBadgeRepo->insert( [
+			'user_id'  => $userId,
+			'badge_id' => $badgeId,
+		] );
+
+		$badge = $this->badgeRepo->find( $badgeId );
+		if ( $badge ) {
+			do_action( 'wc26_user_badge_earned', $userId, $badgeId, $badge['slug'] );
+		}
+	}
+
+	/**
+	 * Get user badge stats
+	 */
+	private function getUserStats( int $userId ): array {
+		$predictions = $this->predictionRepo->findByUser( $userId );
+		$totalPredictions = count( $predictions );
+		$exactHits = array_filter( $predictions, fn( $p ) => $p['prediction_type'] === 'exact' );
+		$trendHits = array_filter( $predictions, fn( $p ) => $p['prediction_type'] === 'trend' );
+		$totalCorrect = array_filter( $predictions, fn( $p ) => $p['earned_points'] > 0 );
+		$chainlinkReports = 0; // Will be fetched from Chainlink report table
+
+		return [
+			'total_predictions' => $totalPredictions,
+			'exact_hits' => count( $exactHits ),
+			'trend_hits' => count( $trendHits ),
+			'total_correct' => count( $totalCorrect ),
+			'chainlink_reports' => $chainlinkReports,
+		];
+	}
+
+	/**
+	 * Check if user meets badge criteria
+	 */
+	private function meetsCriteria( array $stats, array $badge ): bool {
+		$criteria = $badge['criteria'];
+		$threshold = (int) $badge['threshold'];
+
+		return isset( $stats[ $criteria ] ) && $stats[ $criteria ] >= $threshold;
+	}
+
+	/**
+	 * Get user badges with progress
+	 */
+	public function getUserBadgesWithProgress( int $userId ): array {
+		$stats = $this->getUserStats( $userId );
+		$allBadges = $this->badgeRepo->findAll();
+		$userBadges = $this->userBadgeRepo->findBy( [ 'user_id' => $userId ] );
+		$userBadgeIds = array_column( $userBadges, 'badge_id' );
+
+		$result = [];
+		foreach ( $allBadges as $badge ) {
+			$badgeId = (int) $badge['id'];
+			$criteria = $badge['criteria'];
+			$threshold = (int) $badge['threshold'];
+			$current = $stats[ $criteria ] ?? 0;
+
+			$result[] = [
+				'id' => $badgeId,
+				'slug' => $badge['slug'],
+				'name' => $badge['name'],
+				'description' => $badge['description'],
+				'icon_url' => $badge['icon_url'],
+				'earned' => in_array( $badgeId, $userBadgeIds ),
+				'progress' => min( 100, ( $current / $threshold ) * 100 ),
+				'current' => $current,
+				'threshold' => $threshold,
+			];
+		}
+
+		return $result;
 	}
 }
